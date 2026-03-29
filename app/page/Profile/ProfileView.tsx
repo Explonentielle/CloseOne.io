@@ -1,6 +1,6 @@
 "use client";
  
-import CloserBadge, { BADGE_CONFIGS, getBadgesForCA } from "@/app/components/CloserBadge";
+import CloserBadge, { BADGE_CONFIGS, getBadgesForCA } from "@/app/ui/CloserBadge";
 import { Mail, Phone, MapPin, Calendar, Trophy, Target, TrendingUp, Users, Zap } from "lucide-react";
  
 const profile = {
