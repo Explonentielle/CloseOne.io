@@ -1,9 +1,10 @@
 "use client";
 
 import { Phone, Mail, Search, ZoomIn, ZoomOut, User } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import CloserBadge, { getBadgesForCA } from "@/components/CloserBadge";
+import MapProvider from "./MapProvider";
 
 interface Closer {
   id: number;
@@ -135,21 +136,44 @@ const closers: Closer[] = [
   },
 ];
 
-const cityPositions: Record<string, { x: number; y: number }> = {
-  Paris: { x: 48, y: 28 },
-  Lyon: { x: 52, y: 55 },
-  Marseille: { x: 55, y: 74 },
-  Bordeaux: { x: 28, y: 58 },
-  Lille: { x: 50, y: 10 },
-  Toulouse: { x: 34, y: 72 },
-  Nantes: { x: 22, y: 40 },
-  Strasbourg: { x: 68, y: 28 },
+const geoMap: Record<string, { lat: number; lng: number }> = {
+  Paris: { lat: 48.8566, lng: 2.3522 },
+  Lyon: { lat: 45.764, lng: 4.8357 },
+  Marseille: { lat: 43.2965, lng: 5.3698 },
+  Bordeaux: { lat: 44.8378, lng: -0.5792 },
+  Lille: { lat: 50.6292, lng: 3.0573 },
+  Toulouse: { lat: 43.6047, lng: 1.4442 },
+  Nantes: { lat: 47.2184, lng: -1.5536 },
+  Strasbourg: { lat: 48.5734, lng: 7.7521 },
 };
+
+interface Closer {
+  id: number;
+  name: string;
+  role: string;
+  city: string;
+  sectors: string[];
+  available: boolean;
+  avatar: string;
+  deals: number;
+  revenue: string;
+  ca: number;
+  email: string;
+  phone: string;
+}
 
 const isElite = (c: Closer) => c.ca >= 50000;
 
-const btnClass =
-  "w-8 h-8 rounded-lg bg-[#1A1F24] border border-[#2A2F35] flex items-center justify-center text-[#A0A0A0] hover:text-white transition-colors";
+const dotColor = (c: Closer) => {
+  if (!c.available) return "#A0A0A0";
+  return isElite(c) ? "#FFD700" : "#0EFF9C";
+};
+
+const dotGlow = (c: Closer) => {
+  if (!c.available) return undefined;
+  if (isElite(c)) return "0 0 12px #FFD70080, 0 0 24px #FFD70040";
+  return "0 0 8px #0EFF9C60";
+};
 
 export default function MapView() {
   const [selected, setSelected] = useState<Closer | null>(null);
@@ -158,48 +182,70 @@ export default function MapView() {
   const [filterAvail, setFilterAvail] = useState<
     "all" | "available" | "unavailable"
   >("all");
-  const [zoom, setZoom] = useState(1);
 
-  const filtered = closers.filter((c) => {
-    if (
-      search &&
-      !c.name.toLowerCase().includes(search.toLowerCase()) &&
-      !c.city.toLowerCase().includes(search.toLowerCase())
-    )
-      return false;
-    if (filterCity && c.city !== filterCity) return false;
-    if (filterAvail === "available" && !c.available) return false;
-    if (filterAvail === "unavailable" && c.available) return false;
-    return true;
-  });
+  // ✅ filtered défini AVANT utilisation
+  const filtered = useMemo(() => {
+    return closers.filter((c) => {
+      if (
+        search &&
+        !c.name.toLowerCase().includes(search.toLowerCase()) &&
+        !c.city.toLowerCase().includes(search.toLowerCase())
+      )
+        return false;
+
+      if (filterCity && c.city !== filterCity) return false;
+
+      if (filterAvail === "available" && !c.available) return false;
+      if (filterAvail === "unavailable" && c.available) return false;
+
+      return true;
+    });
+  }, [search, filterCity, filterAvail]);
 
   const cities = [...new Set(closers.map((c) => c.city))];
 
+  const points = useMemo(() => {
+    return filtered
+      .map((c) => {
+        const pos = geoMap[c.city];
+        if (!pos) return null;
+        return {
+          id: c.id,
+          name: c.name,
+          ...pos,
+        };
+      })
+      .filter(Boolean);
+  }, [filtered]);
+
   const handleContact = (type: "phone" | "email") => {
     if (!selected) return;
-    if (type === "phone")
+
+    if (type === "phone") {
       toast.success(`Appel vers ${selected.phone}`, {
         description: selected.name,
       });
-    else
+    } else {
       toast.success(`Email envoyé à ${selected.email}`, {
         description: selected.name,
       });
-  };
+    }
 
-  const dotColor = (c: Closer) => {
-    if (!c.available) return "#A0A0A0";
-    return isElite(c) ? "#FFD700" : "#0EFF9C";
-  };
+    const dotColor = (c: Closer) => {
+      if (!c.available) return "#A0A0A0";
+      return isElite(c) ? "#FFD700" : "#0EFF9C";
+    };
 
-  const dotGlow = (c: Closer) => {
-    if (!c.available) return undefined;
-    if (isElite(c)) return "0 0 12px #FFD70080, 0 0 24px #FFD70040";
-    return "0 0 8px #0EFF9C60";
+    const dotGlow = (c: Closer) => {
+      if (!c.available) return undefined;
+      if (isElite(c)) return "0 0 12px #FFD70080, 0 0 24px #FFD70040";
+      return "0 0 8px #0EFF9C60";
+    };
   };
 
   return (
     <div className="space-y-6 animate-slide-up">
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Carte des Closers</h2>
         <p className="text-[#A0A0A0] text-sm mt-1">
@@ -217,14 +263,15 @@ export default function MapView() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par nom ou ville..."
-            className="w-full h-10 rounded-lg border border-[#2A2F35] bg-[#1A1F24] pl-10 pr-4 text-sm text-white placeholder:text-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#0EFF9C]/50"
+            placeholder="Rechercher..."
+            className="w-full h-10 rounded-lg border border-[#2A2F35] bg-[#1A1F24] pl-10 pr-4 text-sm text-white"
           />
         </div>
+
         <select
           value={filterCity}
           onChange={(e) => setFilterCity(e.target.value)}
-          className="h-10 rounded-lg border border-[#2A2F35] bg-[#1A1F24] px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#0EFF9C]/50"
+          className="h-10 rounded-lg border border-[#2A2F35] bg-[#1A1F24] px-3 text-sm text-white"
         >
           <option value="">Toutes les villes</option>
           {cities.map((c) => (
@@ -233,12 +280,13 @@ export default function MapView() {
             </option>
           ))}
         </select>
+
         <div className="flex gap-1.5">
           {(["all", "available", "unavailable"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setFilterAvail(v)}
-              className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
+              className="px-3 py-2 rounded-lg text-xs"
               style={
                 filterAvail === v
                   ? {
@@ -259,104 +307,28 @@ export default function MapView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Map area */}
-        <div
-          className="lg:col-span-2 glass-card p-6 relative overflow-hidden"
-          style={{ minHeight: 450 }}
-        >
-          {/* Zoom controls */}
-          <div className="absolute top-4 right-4 z-10 flex flex-col gap-1.5">
-            <button
-              onClick={() => setZoom(Math.min(zoom + 0.2, 2))}
-              className={btnClass}
-            >
-              <ZoomIn size={14} />
-            </button>
-            <button
-              onClick={() => setZoom(Math.max(zoom - 0.2, 0.6))}
-              className={btnClass}
-            >
-              <ZoomOut size={14} />
-            </button>
-            <button
-              onClick={() => setZoom(1)}
-              className={`${btnClass} text-xs font-bold`}
-            >
-              1x
-            </button>
-          </div>
-
-          <div
-            className="w-full h-full"
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: "center",
-              transition: "transform 0.3s ease",
-            }}
-          >
-            {/* SVG France outline */}
-            <svg
-              viewBox="0 0 100 100"
-              className="w-full h-full absolute inset-0 p-6"
-              style={{ opacity: 0.15 }}
-            >
-              <path
-                d="M45 5 L55 8 L62 15 L60 25 L65 35 L60 45 L65 55 L60 65 L55 75 L45 80 L35 75 L28 65 L25 55 L30 45 L28 35 L32 25 L38 15 Z"
-                fill="none"
-                stroke="#0EFF9C"
-                strokeWidth="0.5"
-              />
-            </svg>
-
-            {/* Closer dots */}
-            {filtered.map((c) => {
-              const pos = cityPositions[c.city];
-              if (!pos) return null;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelected(c)}
-                  className="absolute group transition-all duration-300"
-                  style={{
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform:
-                      selected?.id === c.id
-                        ? "translate(-50%, -50%) scale(1.5)"
-                        : "translate(-50%, -50%)",
-                    zIndex: selected?.id === c.id ? 10 : 1,
-                  }}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full transition-all duration-200 hover:scale-125"
-                    style={{
-                      background: dotColor(c),
-                      boxShadow: dotGlow(c),
-                      animation: c.available
-                        ? "pulseGlow 2s ease-in-out infinite"
-                        : undefined,
-                    }}
-                  />
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-[#1A1F24] border border-[#2A2F35] px-2 py-0.5 rounded">
-                    {c.name}
-                  </span>
-                </button>
-              );
-            })}
+        {/* MAP */}
+        <div className="lg:col-span-2 glass-card p-6">
+          <div className="h-[450px] w-full rounded-xl overflow-hidden">
+            <MapProvider
+              apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+              center={{ lat: 46.603354, lng: 1.888334 }}
+              points={points as any}
+              selectedId={selected?.id}
+              onSelect={(id: number) => {
+                const closer = closers.find((c) => c.id === id);
+                if (closer) setSelected(closer);
+              }}
+            />
           </div>
         </div>
 
-        {/* Right panel */}
+        {/* RIGHT PANEL */}
         <div className="space-y-4">
           {selected ? (
-            <div className="glass-card p-5 space-y-4 animate-slide-up">
+            <div className="glass-card p-5 space-y-4">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-[#0D1117]"
-                  style={{
-                    background: "linear-gradient(135deg, #0EFF9C, #00C27A)",
-                  }}
-                >
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-[#0D1117] bg-gradient-to-r from-[#0EFF9C] to-[#00C27A]">
                   {selected.avatar}
                 </div>
                 <div>
@@ -365,72 +337,49 @@ export default function MapView() {
                 </div>
               </div>
 
-              {/* Badges */}
-              <div className="flex gap-1.5 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
                 {getBadgesForCA(selected.ca).map((b) => (
                   <CloserBadge key={b.key} badge={b} size={24} />
                 ))}
               </div>
 
-              <div className="space-y-2 text-sm">
-                {[
-                  { label: "Ville", value: selected.city },
-                  { label: "Secteurs", value: selected.sectors.join(", ") },
-                  { label: "Deals", value: String(selected.deals), bold: true },
-                  { label: "CA Mensuel", value: selected.revenue, green: true },
-                ].map((row) => (
-                  <div key={row.label} className="flex justify-between">
-                    <span className="text-[#A0A0A0]">{row.label}</span>
-                    <span
-                      className={row.bold ? "font-semibold" : ""}
-                      style={{ color: row.green ? "#0EFF9C" : "#fff" }}
-                    >
-                      {row.value}
-                    </span>
-                  </div>
-                ))}
+              <div className="text-sm space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-[#A0A0A0]">Statut</span>
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={
-                      selected.available
-                        ? {
-                            background: "rgba(14,255,156,0.1)",
-                            color: "#0EFF9C",
-                          }
-                        : { background: "#1A1F24", color: "#A0A0A0" }
-                    }
-                  >
-                    {selected.available ? "Disponible" : "Indisponible"}
-                  </span>
+                  <span className="text-[#A0A0A0]">Ville</span>
+                  <span>{selected.city}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#A0A0A0]">Deals</span>
+                  <span className="font-semibold">{selected.deals}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#A0A0A0]">CA</span>
+                  <span className="text-[#0EFF9C]">{selected.revenue}</span>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => handleContact("phone")}
-                  className="flex-1 h-9 rounded-lg text-[#0D1117] text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
-                  style={{
-                    background: "linear-gradient(135deg, #0EFF9C, #00C27A)",
-                  }}
+                  className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg text-[#0D1117] text-xs font-semibold bg-gradient-to-r from-[#0EFF9C] to-[#00C27A] hover:opacity-90 transition"
                 >
-                  <Phone size={12} /> Contacter
+                  <Phone size={14} />
+                  Contacter
                 </button>
+
                 <button
                   onClick={() => handleContact("email")}
-                  className="flex-1 h-9 rounded-lg bg-[#1A1F24] border border-[#2A2F35] text-white text-xs font-medium hover:bg-[#2A2F35] transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-[#1A1F24] border border-[#2A2F35] text-white text-xs hover:bg-[#232830] transition"
                 >
-                  <Mail size={12} /> Email
+                  <Mail size={14} />
+                  Email
                 </button>
               </div>
             </div>
           ) : (
-            <div className="glass-card p-5 flex flex-col items-center justify-center text-center h-48">
-              <User size={28} className="text-[#A0A0A0] mb-3" />
-              <p className="text-[#A0A0A0] text-sm">
-                Cliquez sur un closer pour voir son profil
-              </p>
+            <div className="glass-card p-5 flex items-center justify-center h-48 text-[#A0A0A0]">
+              <User className="mr-2" />
+              Sélectionner un closer
             </div>
           )}
 
