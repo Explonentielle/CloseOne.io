@@ -27,7 +27,7 @@ const weeklyData = [
  
 const goalProgress = 78;
  
-export default function DashboardView() {
+export default function DashBoardView() {
   return (
     <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">

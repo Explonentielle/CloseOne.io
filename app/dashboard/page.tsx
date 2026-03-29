@@ -1,11 +1,11 @@
 import AppLayout from "@/components/AppLayout";
-import DashboardView from "./DashboardView";
+import DashBoardView from "./DashBoardView";
 
  
 export default function DashboardPage() {
   return (
     <AppLayout>
-      <DashboardView />
+      <DashBoardView />
     </AppLayout>
   );
 }
