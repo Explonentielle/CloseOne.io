@@ -21,7 +21,7 @@ export default function Sidebar() {
   const router = useRouter();
  
   return (
-    <aside className="w-16 lg:w-60 h-screen glass-card border-r border-border/50 flex flex-col py-5 shrink-0 rounded-[1%]">
+    <aside className="w-16 lg:w-60 min-h-screen glass-card border-r border-border/50 flex flex-col py-5 shrink-0 rounded-[1%]">
       <div className="px-3 lg:px-5 mb-8">
         <Link href="/landingpage" className="hidden lg:flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
