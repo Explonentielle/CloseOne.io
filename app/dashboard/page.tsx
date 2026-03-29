@@ -1,5 +1,5 @@
 import AppLayout from "@/components/AppLayout";
-import DashboardView from "./DashBoardView";
+import DashboardView from "./DashboardView";
 
  
 export default function DashboardPage() {
