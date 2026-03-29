@@ -1,4 +1,4 @@
-import AppLayout from "@/app/AppLayout";
+import AppLayout from "@/components/AppLayout";
 import DealsView from "./DealsView";
 
 export default function DealsPage() {
