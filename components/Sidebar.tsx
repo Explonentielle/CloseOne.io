@@ -1,28 +1,24 @@
 "use client";
 
 import {
-  BarChart3,
-  Map,
-  Target,
+  LayoutDashboard,
+  Users,
+  HandCoins,
   Trophy,
-  Gift,
-  Briefcase,
-  Globe,
+  UserCircle,
   Settings,
   Zap,
   LogOut,
-  User,
-  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard" },
-  { icon: Target, label: "Mes Clients", path: "/clients" },
-  { icon: Briefcase, label: "Deals", path: "/deals" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Users, label: "Mes Clients", path: "/clients" },
+  { icon: HandCoins, label: "Deals", path: "/deals" },
   { icon: Trophy, label: "Stats", path: "/statistics" },
-  { icon: User, label: "Profil", path: "/profile" },
+  { icon: UserCircle, label: "Profil", path: "/profil" },
 ];
 
 export default function Sidebar() {
@@ -30,7 +26,7 @@ export default function Sidebar() {
   const router = useRouter();
 
   return (
-    <aside className="w-16 lg:w-60 min-h-screen glass-card border-r border-border/50 flex flex-col py-5 shrink-0 rounded-[var(--radius-lg)]">
+    <aside className="w-16 lg:w-60 min-h-screen glass-card border-r border-border/50 flex flex-col py-5 shrink-0 rounded-[var(--radius-lg)] sticky top-0 self-start h-screen">
       <div className="px-3 lg:px-5 mb-8">
         <Link href="/landingpage" className="hidden lg:flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
@@ -71,7 +67,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-2 lg:px-3 space-y-0.5">
+      <div className="px-2 lg:px-3 space-y-0.5 mt-auto">
         <Link
           href="/settings"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${

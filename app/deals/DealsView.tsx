@@ -92,34 +92,28 @@ const mockDeals: Deal[] = [
 function StatusBadge({ status }: { status: DealStatus }) {
   const config = {
     Gagné: {
-      bg: "rgba(0,194,122,0.15)",
-      text: "#00C27A",
+      bg: "hsl(var(--primary) / 0.15)",
+      text: "hsl(var(--primary))",
       icon: CheckCircle,
-      shadow: "0 0 8px rgba(0,194,122,0.3)",
     },
     "En cours": {
-      bg: "rgba(59,130,246,0.15)",
-      text: "#3B82F6",
+      bg: "hsl(var(--warning) / 0.15)",
+      text: "hsl(var(--warning))",
       icon: Clock,
-      shadow: "none",
-      border: "1px solid rgba(59,130,246,0.4)",
     },
     Perdu: {
-      bg: "rgba(248,113,113,0.15)",
-      text: "#F87171",
+      bg: "hsl(var(--destructive) / 0.15)",
+      text: "hsl(var(--destructive))",
       icon: XCircle,
-      shadow: "none",
     },
   }[status];
   const Icon = config.icon;
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all"
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
       style={{
         backgroundColor: config.bg,
         color: config.text,
-        boxShadow: config.shadow,
-        border: "border" in config ? config.border : "none",
       }}
     >
       <Icon size={12} />
@@ -167,14 +161,20 @@ export default function DealsView() {
     <div className="space-y-6 animate-slide-up">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Deals</h2>
-          <p className="text-[#A0A0A0] text-sm mt-1">
+          <h2 className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>
+            Deals
+          </h2>
+          <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
             Gérez tous vos deals commerciaux
           </p>
         </div>
         <Link
           href="/deals/adddeals"
-          className="gradient-primary text-[#0D1117] px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shrink-0"
+          className="px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shrink-0"
+          style={{
+            background: "var(--gradient-primary)",
+            color: "hsl(var(--primary-foreground))",
+          }}
         >
           <Plus size={16} /> Ajouter un Deal
         </Link>
@@ -183,26 +183,39 @@ export default function DealsView() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Deals", value: mockDeals.length, color: "white" },
+          { label: "Total Deals", value: mockDeals.length, color: "foreground" },
           {
             label: "CA Gagné",
             value: `€${(totalCA / 1000).toFixed(0)}K`,
-            color: "#0EFF9C",
+            color: "primary",
           },
           {
             label: "Commissions",
             value: `€${(totalComm / 1000).toFixed(1)}K`,
-            color: "#0EFF9C",
+            color: "primary",
           },
           {
             label: "Taux de closing",
             value: `${Math.round((mockDeals.filter((d) => d.status === "Gagné").length / mockDeals.length) * 100)}%`,
-            color: "white",
+            color: "foreground",
           },
         ].map((s) => (
-          <div key={s.label} className="glass-card p-4">
-            <p className="text-xs text-[#A0A0A0]">{s.label}</p>
-            <p className="text-xl font-bold mt-1" style={{ color: s.color }}>
+          <div
+            key={s.label}
+            className="p-4"
+            style={{
+              backgroundColor: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border) / 0.5)",
+              borderRadius: "var(--radius-lg)",
+            }}
+          >
+            <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              {s.label}
+            </p>
+            <p
+              className="text-xl font-bold mt-1"
+              style={{ color: s.color === "primary" ? "hsl(var(--primary))" : "hsl(var(--foreground))" }}
+            >
               {s.value}
             </p>
           </div>
@@ -214,13 +227,19 @@ export default function DealsView() {
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]"
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: "hsl(var(--muted-foreground))" }}
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher un deal ou client..."
-            className="w-full h-10 rounded-lg border border-[#2A2F35] bg-[#1A1F24] pl-10 pr-4 text-sm text-white placeholder:text-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#0EFF9C]/50"
+            className="w-full h-10 rounded-lg pl-10 pr-4 text-sm"
+            style={{
+              border: "1px solid hsl(var(--border))",
+              backgroundColor: "hsl(var(--secondary))",
+              color: "hsl(var(--foreground))",
+            }}
           />
         </div>
         <div className="flex gap-2">
@@ -228,11 +247,19 @@ export default function DealsView() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
+              style={
                 filterStatus === s
-                  ? "gradient-primary text-[#0D1117]"
-                  : "bg-[#1A1F24] text-[#A0A0A0] hover:text-white border border-[#2A2F35]"
-              }`}
+                  ? {
+                      background: "var(--gradient-primary)",
+                      color: "hsl(var(--primary-foreground))",
+                    }
+                  : {
+                      backgroundColor: "hsl(var(--secondary))",
+                      color: "hsl(var(--muted-foreground))",
+                      border: "1px solid hsl(var(--border))",
+                    }
+              }
             >
               {s}
             </button>
@@ -241,19 +268,27 @@ export default function DealsView() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div
+        className="overflow-hidden"
+        style={{
+          backgroundColor: "hsl(var(--card))",
+          border: "1px solid hsl(var(--border) / 0.5)",
+          borderRadius: "var(--radius-lg)",
+        }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2A2F35]">
-                <th className="text-left px-5 py-3 text-xs text-[#A0A0A0] font-medium">
+              <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Deal
                 </th>
-                <th className="text-left px-5 py-3 text-xs text-[#A0A0A0] font-medium">
+                <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Client
                 </th>
                 <th
-                  className="text-left px-5 py-3 text-xs text-[#A0A0A0] font-medium cursor-pointer select-none"
+                  className="text-left px-5 py-3 text-xs font-medium cursor-pointer select-none"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
                   onClick={() => toggleSort("amount")}
                 >
                   <span className="flex items-center gap-1">
@@ -261,30 +296,44 @@ export default function DealsView() {
                   </span>
                 </th>
                 <th
-                  className="text-left px-5 py-3 text-xs text-[#A0A0A0] font-medium cursor-pointer select-none"
+                  className="text-left px-5 py-3 text-xs font-medium cursor-pointer select-none"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
                   onClick={() => toggleSort("commission")}
                 >
                   <span className="flex items-center gap-1">
                     Commission <ArrowUpDown size={12} />
                   </span>
                 </th>
-                <th className="text-left px-5 py-3 text-xs text-[#A0A0A0] font-medium">
+                <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Statut
                 </th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {sorted.map((d) => (
                 <tr
                   key={d.id}
-                  className="border-b border-[#2A2F35]/50 last:border-0 hover:bg-[#1A1F24] transition-colors"
+                  className="last:border-0 transition-colors"
+                  style={{
+                    borderBottom: "1px solid hsl(var(--border) / 0.5)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "hsl(var(--secondary))";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                 >
-                  <td className="px-5 py-3.5 font-medium">{d.name}</td>
-                  <td className="px-5 py-3.5 text-[#A0A0A0]">{d.client}</td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-3.5 font-medium" style={{ color: "hsl(var(--foreground))" }}>
+                    {d.name}
+                  </td>
+                  <td className="px-5 py-3.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {d.client}
+                  </td>
+                  <td className="px-5 py-3.5" style={{ color: "hsl(var(--foreground))" }}>
                     €{d.amount.toLocaleString("fr-FR")}
                   </td>
-                  <td className="px-5 py-3.5 text-[#0EFF9C] font-semibold">
+                  <td className="px-5 py-3.5 font-semibold" style={{ color: "hsl(var(--primary))" }}>
                     €{d.commission.toLocaleString("fr-FR")}
                   </td>
                   <td className="px-5 py-3.5">
@@ -294,7 +343,7 @@ export default function DealsView() {
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-[#A0A0A0]">
+                  <td colSpan={5} className="text-center py-12" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Aucun deal trouvé
                   </td>
                 </tr>

@@ -1,5 +1,5 @@
 import AppLayout from "@/components/AppLayout";
-import ProfileView from "./ProfileView";
+import ProfilView from "./ProfilView"; // un seul import
 import { syncUser } from "@/lib/syncUser";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -16,11 +16,13 @@ export default async function ProfilePage() {
     },
   });
 
-  if (!fullUser) redirect("/sign-in");
+  if (!fullUser) {
+    redirect("/sign-in");
+  }
 
   return (
     <AppLayout>
-      <ProfileView user={fullUser} />
+      <ProfilView user={fullUser} />
     </AppLayout>
   );
 }

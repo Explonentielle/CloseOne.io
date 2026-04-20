@@ -1,9 +1,9 @@
 import AppLayout from "@/components/AppLayout";
-import SettingsView from "./SettingsView";
 import { syncUser } from "@/lib/syncUser";
 import { redirect } from "next/navigation";
+import StatisticsView from "./StatisticsView";
 
-export default async function SettingsPage() {
+export default async function StatisticsPage() {
   const user = await syncUser();
 
   if (!user) return null;
@@ -14,7 +14,7 @@ export default async function SettingsPage() {
 
   return (
     <AppLayout>
-      <SettingsView />
+      <StatisticsView />
     </AppLayout>
   );
 }
