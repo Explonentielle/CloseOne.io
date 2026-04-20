@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { ClerkProvider } from "@clerk/nextjs";
  
 const inter = Inter({
   subsets: ["latin"],
@@ -19,6 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    <ClerkProvider>
     <html lang="fr" className={`${inter.variable} h-full`}>
       <body className="min-h-full bg-[#0D1117] text-white antialiased">
         {children}
@@ -34,5 +36,6 @@ export default function RootLayout({
         />
       </body>
     </html>
+  </ClerkProvider>
   );
 }
