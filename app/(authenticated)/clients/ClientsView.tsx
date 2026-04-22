@@ -26,6 +26,8 @@ interface Infopreneur {
   nicheId: string;
   status: "Actif" | "Inactif";
   logo?: string | null;
+  isCustom?: boolean;
+  createdByUserId?: string;
 }
 
 export default function ClientsView() {
@@ -64,6 +66,8 @@ export default function ClientsView() {
           status: inf.actif ? "Actif" : "Inactif",
           challengesCount: 0,
           logo: inf.logo,
+          isCustom: inf.isCustom,
+          createdByUserId: inf.createdByUserId,
         });
       }
       map.get(inf.id).challengesCount += 1;
@@ -110,6 +114,29 @@ export default function ClientsView() {
 
   if (!user) return <div className="py-20 text-center">Chargement...</div>;
 
+  // Helper pour obtenir le badge selon le type d'infopreneur
+  const getTypeBadge = (inf: Infopreneur) => {
+    if (!inf.isCustom) {
+      return (
+        <span className="text-[11px] font-medium bg-blue-500/15 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+          Vérifié
+        </span>
+      );
+    }
+    if (inf.createdByUserId === user.id) {
+      return (
+        <span className="text-[11px] font-medium bg-purple-500/15 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+          Personnalisé (moi)
+        </span>
+      );
+    }
+    return (
+      <span className="text-[11px] font-medium bg-orange-500/15 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full border border-orange-500/30">
+        Personnalisé (autre)
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* En-tête avec titre et barre de recherche */}
@@ -117,7 +144,7 @@ export default function ClientsView() {
         <div>
           <h2 className="text-2xl font-bold blue">Mes Clients</h2>
           <p className="text-muted-foreground text-sm">
-            Gérez vos relations avec les infopreneurs
+            Gérez vos relations clients
           </p>
         </div>
         <div className="relative w-full sm:w-72">
@@ -146,8 +173,7 @@ export default function ClientsView() {
           </h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Infopreneurs avec lesquels vous avez déjà collaboré (un ou plusieurs
-          challenges).
+          Clients avec lesquels vous avez déjà collaboré (challenges ou VSL).
         </p>
 
         {filteredMyClients.length === 0 ? (
@@ -171,19 +197,19 @@ export default function ClientsView() {
                       <Users size={18} className="text-primary" />
                     </div>
                   )}
-                  <h3 className="font-semibold text-foreground mb-1">
-                    {client.name}
-                  </h3>
-
-                  <span
-                    className={
-                      client.status === "Actif"
-                        ? "badge-active"
-                        : "badge-inactive"
-                    }
-                  >
-                    {client.status}
-                  </span>
+                  <h3 className="font-semibold text-foreground">{client.name}</h3>
+                  <div className="flex gap-2">
+                    {getTypeBadge(client)}
+                    <span
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                        client.status === "Actif"
+                          ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
+                          : "bg-gray-500/15 text-gray-700 dark:text-gray-300 border border-gray-500/30"
+                      }`}
+                    >
+                      {client.status}
+                    </span>
+                  </div>
                 </div>
                 <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
                   {client.niche}
@@ -210,7 +236,7 @@ export default function ClientsView() {
           <div className="flex items-center gap-2">
             <UserPlus size={18} className="text-muted-foreground" />
             <h3 className="text-lg font-semibold">
-              Infopreneurs disponibles
+              Clients disponibles
               <span className="ml-2 text-xs text-muted-foreground font-normal">
                 ({filteredAvailable.length})
               </span>
@@ -218,7 +244,7 @@ export default function ClientsView() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1 text-xs badge-active bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/20 transition"
+            className="inline-flex items-center gap-1 text-xs bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/30 transition"
           >
             <PlusCircle size={14} />
             Créer un infopreneur personnalisé
@@ -253,18 +279,19 @@ export default function ClientsView() {
                       <Users size={18} className="text-muted-foreground" />
                     </div>
                   )}
-                  <h3 className="font-semibold text-foreground mb-1">
-                    {client.name}
-                  </h3>
-                  <span
-                    className={
-                      client.status === "Actif"
-                        ? "badge-active"
-                        : "badge-inactive"
-                    }
-                  >
-                    {client.status}
-                  </span>
+                  <h3 className="font-semibold text-foreground">{client.name}</h3>
+                  <div className="flex gap-2">
+                    {getTypeBadge(client)}
+                    <span
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                        client.status === "Actif"
+                          ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
+                          : "bg-gray-500/15 text-gray-700 dark:text-gray-300 border border-gray-500/30"
+                      }`}
+                    >
+                      {client.status}
+                    </span>
+                  </div>
                 </div>
                 <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
                   {client.niche}
@@ -330,14 +357,22 @@ export default function ClientsView() {
                   <button
                     type="button"
                     onClick={() => setNewInfopreneur({ ...newInfopreneur, status: "Actif" })}
-                    className={`flex-1 py-2 rounded-lg border ${newInfopreneur.status === "Actif" ? "bg-primary/15 text-primary border-primary/30" : "bg-background border-border"}`}
+                    className={`flex-1 py-2 rounded-lg border transition ${
+                      newInfopreneur.status === "Actif"
+                        ? "bg-primary/15 text-primary border-primary/30"
+                        : "bg-background border-border"
+                    }`}
                   >
                     Actif
                   </button>
                   <button
                     type="button"
                     onClick={() => setNewInfopreneur({ ...newInfopreneur, status: "Inactif" })}
-                    className={`flex-1 py-2 rounded-lg border ${newInfopreneur.status === "Inactif" ? "bg-primary/15 text-primary border-primary/30" : "bg-background border-border"}`}
+                    className={`flex-1 py-2 rounded-lg border transition ${
+                      newInfopreneur.status === "Inactif"
+                        ? "bg-primary/15 text-primary border-primary/30"
+                        : "bg-background border-border"
+                    }`}
                   >
                     Inactif
                   </button>
@@ -346,7 +381,7 @@ export default function ClientsView() {
               <button
                 onClick={handleCreateInfopreneur}
                 disabled={saving}
-                className="w-full btn-primary py-2 disabled:opacity-50"
+                className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition disabled:opacity-50"
               >
                 {saving ? "Création..." : "Créer l'infopreneur"}
               </button>

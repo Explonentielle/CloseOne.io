@@ -127,8 +127,8 @@ export async function createInfopreneur(data: InfopreneurInput) {
         nom: parsed.data.name,
         nicheId: parsed.data.nicheId,
         actif: parsed.data.status === "Actif",
-        isCustom: true,               // ← AJOUTÉ
-        createdByUserId: user.id,    // ← AJOUTÉ
+        isCustom: true,
+        createdByUserId: user.id,
       },
     });
 
@@ -384,6 +384,8 @@ export async function getAllInfopreneurs(): Promise<{
     nicheId: string;
     status: "Actif" | "Inactif";
     logo?: string | null;
+    isCustom: boolean;
+    createdByUserId?: string; 
   }[];
 }> {
   const { userId } = await auth();
@@ -399,8 +401,10 @@ export async function getAllInfopreneurs(): Promise<{
     name: inf.nom,
     niche: inf.niche.nom,
     nicheId: inf.nicheId,
-    status: (inf.actif ? "Actif" : "Inactif") as "Actif" | "Inactif", // ← correction ici
+    status: (inf.actif ? "Actif" : "Inactif") as "Actif" | "Inactif",
     logo: inf.logo,
+    isCustom: inf.isCustom ?? false,
+    createdByUserId: inf.createdByUserId ?? undefined,
   }));
 
   return { success: true, data: formatted };
