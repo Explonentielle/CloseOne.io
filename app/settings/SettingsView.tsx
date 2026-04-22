@@ -18,7 +18,7 @@ export default function SettingsView() {
         </p>
       </div>
 
-      {/* Profile */}
+      {/* Profil */}
       <div className="glass-card p-6 space-y-5">
         <div className="flex items-center gap-3 mb-2">
           <User size={18} className="text-[#0EFF9C]" />

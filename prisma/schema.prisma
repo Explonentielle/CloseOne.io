@@ -6,47 +6,280 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id          String       @id @default(cuid())
-  clerkId     String       @unique
-  email       String       @unique
-  firstName   String?
-  lastName    String?
-  avatarUrl   String?
-  role        Role         @default(CLOSER)
-  ecosystemId String?
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  deals       Deal[]
-  objectives  Objective[]
-  ecosystem   Ecosystem?   @relation(fields: [ecosystemId], references: [id])
-  metrics     UserMetrics?
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  USER
+  CLOSER
+  MANAGER
+  ADMIN
 }
+
+enum ExperienceClosing {
+  MOINS_1_AN
+  UN_AN
+  DEUX_ANS
+  TROIS_ANS_PLUS
+}
+
+enum SaleType {
+  FULL_PAY
+  SPLIT_PAY
+}
+
+enum CloseRound {
+  R1
+  R2
+}
+
+enum NbMensualites {
+  X2
+  X3
+  X4
+  X6
+  X8
+  X10
+}
+
+enum ChallengeStatus {
+  A_VENIR
+  EN_COURS
+  TERMINE
+}
+
+enum DaySentiment {
+  HAPPY
+  NEUTRAL
+  FRUSTRATED
+  ON_FIRE
+  TIRED
+}
+
+enum ObjectiveType {
+  CASH_CONTRACTE
+  TAUX_CLOSING
+  NB_CLOSES
+  TAUX_COLLECTE
+  NB_R1
+  LIBRE
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id           String             @id @default(cuid())
+  clerkId      String             @unique
+  email        String             @unique
+  firstName    String?
+  lastName     String?
+  avatarUrl    String?
+  telephone    String?
+  localisation String?
+  experience   ExperienceClosing?
+  role         Role               @default(CLOSER)
+  isActive     Boolean            @default(true)
+  isPublic     Boolean            @default(false)
+  publicSlug   String?            @unique
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  challenges    Challenge[]
+  objectives    Objective[]
+  monthlyScores MonthlyScore[]
+  metrics       UserMetrics?
+  niches        Niche[]          @relation("NicheCreator")
+  createdInfopreneurs Infopreneur[] @relation("InfopreneurCreator") // ← relation inverse
+}
+
+// ─────────────────────────────────────────
+// NICHE
+// ─────────────────────────────────────────
+
+model Niche {
+  id              String  @id @default(cuid())
+  nom             String  @unique
+  isCustom        Boolean @default(false)
+  createdByUserId String?
+
+  createdBy    User?        @relation("NicheCreator", fields: [createdByUserId], references: [id])
+  infopreneurs Infopreneur[]
+}
+
+// ─────────────────────────────────────────
+// INFOPRENEUR (mis à jour)
+// ─────────────────────────────────────────
+
+model Infopreneur {
+  id              String   @id @default(cuid())
+  nom             String
+  nicheId         String
+  actif           Boolean  @default(true)
+  logo            String?                              // ← nouveau champ
+  isCustom        Boolean  @default(false)             // ← nouveau champ
+  createdByUserId String?                              // ← nouveau champ
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  niche      Niche       @relation(fields: [nicheId], references: [id])
+  createdBy  User?       @relation("InfopreneurCreator", fields: [createdByUserId], references: [id])
+  packages   Package[]
+  challenges Challenge[]
+}
+
+// ─────────────────────────────────────────
+// PACKAGE
+// ─────────────────────────────────────────
+
+model Package {
+  id                    String          @id @default(cuid())
+  nomPackage            String
+  valeur                Float
+  infopreneurId         String
+  financementDisponible Boolean         @default(false)
+  optionsFinancement    NbMensualites[]
+  fraisFinancement      Boolean         @default(false)
+  tauxFrais             Float?
+  montantFraisFixe      Float?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  infopreneur Infopreneur @relation(fields: [infopreneurId], references: [id])
+  deals       Deal[]
+}
+
+// ─────────────────────────────────────────
+// CHALLENGE
+// ─────────────────────────────────────────
+
+model Challenge {
+  id            String          @id @default(cuid())
+  userId        String
+  infopreneurId String
+  numero        Int
+  label         String?
+  dateDebut     DateTime?
+  dateFin       DateTime?
+  statut        ChallengeStatus @default(A_VENIR)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id])
+  infopreneur  Infopreneur  @relation(fields: [infopreneurId], references: [id])
+  dailyEntries DailyEntry[]
+  deals        Deal[]
+
+  @@unique([userId, infopreneurId, numero])
+}
+
+// ─────────────────────────────────────────
+// DAILY ENTRY
+// ─────────────────────────────────────────
+
+model DailyEntry {
+  id          String        @id @default(cuid())
+  challengeId String
+  date        DateTime
+  r1Planifie  Int           @default(0)
+  r1Effectue  Int           @default(0)
+  r2Planifie  Int           @default(0)
+  r2Effectue  Int           @default(0)
+  nbCloses    Int           @default(0)
+  sentiment   DaySentiment?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([challengeId, date])
+}
+
+// ─────────────────────────────────────────
+// DEAL
+// ─────────────────────────────────────────
 
 model Deal {
-  id          String     @id @default(cuid())
-  name        String
-  amount      Float
-  commission  Float
-  status      DealStatus
-  userId      String
-  ecosystemId String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  ecosystem   Ecosystem? @relation(fields: [ecosystemId], references: [id])
-  user        User       @relation(fields: [userId], references: [id])
+  id               String         @id @default(cuid())
+  challengeId      String?
+  packageId        String?
+  prenomClient     String?
+  montantContracte Float          @default(0)
+  montantCollecte  Float          @default(0)
+  typeVente        SaleType?
+  nbMensualites    NbMensualites?
+  dateR1           DateTime?
+  dateClose        DateTime?
+  closeEn          CloseRound?
+  delaiConversion  Int?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  challenge Challenge? @relation(fields: [challengeId], references: [id])
+  package   Package?   @relation(fields: [packageId], references: [id])
+  payments  Payment[]
 }
 
-model Ecosystem {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deals       Deal[]
-  users       User[]
+// ─────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────
+
+model Payment {
+  id        String   @id @default(cuid())
+  dealId    String
+  date      DateTime
+  montant   Float
+  createdAt DateTime @default(now())
+
+  deal Deal @relation(fields: [dealId], references: [id])
 }
+
+// ─────────────────────────────────────────
+// OBJECTIVE
+// ─────────────────────────────────────────
+
+model Objective {
+  id             String         @id @default(cuid())
+  userId         String
+  mois           String?
+  intitule       String?
+  valeurCible    Float?
+  typeObjectif   ObjectiveType?
+  atteint        Boolean        @default(false)
+  dateValidation DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// MONTHLY SCORE
+// ─────────────────────────────────────────
+
+model MonthlyScore {
+  id           String   @id @default(cuid())
+  userId       String
+  mois         String
+  scoreC1      Float
+  scoreC2      Float
+  scoreC3      Float
+  scoreC4      Float
+  scoreC5      Float
+  scoreBrut    Float
+  scoreFinal   Float
+  calculatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mois])
+}
+
+// ─────────────────────────────────────────
+// USER METRICS
+// ─────────────────────────────────────────
 
 model UserMetrics {
   id             String   @id @default(cuid())
@@ -57,41 +290,6 @@ model UserMetrics {
   totalDeals     Int      @default(0)
   wonDeals       Int      @default(0)
   updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id])
-}
 
-model Objective {
-  id           String        @id @default(cuid())
-  userId       String
-  title        String
-  description  String?
-  targetValue  Float
-  currentValue Float         @default(0)
-  type         ObjectiveType
-  periodStart  DateTime?
-  periodEnd    DateTime?
-  isCompleted  Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  user         User          @relation(fields: [userId], references: [id])
-}
-
-enum Role {
-  USER
-  CLOSER
-  MANAGER
-  ADMIN
-}
-
-enum DealStatus {
-  PENDING
-  WON
-  LOST
-}
-
-enum ObjectiveType {
-  REVENUE
-  DEALS_COUNT
-  WIN_RATE
-  CUSTOM
+  user User @relation(fields: [userId], references: [id])
 }

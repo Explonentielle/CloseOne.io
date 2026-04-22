@@ -1,71 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Package, Swords } from "lucide-react";
-
-interface PackageItem {
-  id: string;
-  name: string;
-  price: number;
-  financing: string;
-}
-
-interface Challenge {
-  id: string;
-  number: number;
-  label: string;
-  startDate: string;
-  endDate: string;
-  status: "En cours" | "Terminé" | "À venir";
-}
-
-const mockClientsData: Record<string, {
-  name: string;
-  niche: string;
-  status: string;
-  packages: PackageItem[];
-  challenges: Challenge[];
-}> = {
-  "1": {
-    name: "Alex Hormozi FR",
-    niche: "Business & Scaling",
-    status: "Actif",
-    packages: [
-      { id: "p1", name: "Scaling Mastery", price: 3000, financing: "Full Pay" },
-      { id: "p2", name: "1-on-1 Premium", price: 5000, financing: "Split Pay x3" },
-    ],
-    challenges: [
-      { id: "c1", number: 1, label: "Challenge Janvier", startDate: "2026-01-06", endDate: "2026-01-31", status: "Terminé" },
-      { id: "c2", number: 2, label: "Challenge Mars", startDate: "2026-03-03", endDate: "2026-03-28", status: "En cours" },
-      { id: "c3", number: 3, label: "Challenge Avril", startDate: "2026-04-07", endDate: "2026-05-02", status: "À venir" },
-    ],
-  },
-  "2": {
-    name: "Marie Coaching",
-    niche: "Développement personnel",
-    status: "Actif",
-    packages: [
-      { id: "p3", name: "Programme Confiance", price: 2000, financing: "Split Pay x4" },
-    ],
-    challenges: [
-      { id: "c4", number: 1, label: "Challenge Février", startDate: "2026-02-03", endDate: "2026-02-28", status: "Terminé" },
-      { id: "c5", number: 2, label: "Challenge Avril", startDate: "2026-04-01", endDate: "2026-04-25", status: "En cours" },
-    ],
-  },
-  "3": {
-    name: "Pierre Fitness Pro",
-    niche: "Fitness & Santé",
-    status: "Inactif",
-    packages: [
-      { id: "p4", name: "Transformation 90j", price: 1500, financing: "Full Pay" },
-    ],
-    challenges: [
-      { id: "c6", number: 1, label: "Challenge Décembre", startDate: "2025-12-01", endDate: "2025-12-20", status: "Terminé" },
-    ],
-  },
-};
+import { ArrowLeft, Plus, Package, Swords, Loader2 } from "lucide-react";
+import { getClientDetail, createPackage, createChallenge, ClientDetail } from "@/app/actions/ClientsActions";
 
 // Styles unifiés pour les radius
 const radii = {
@@ -104,15 +43,93 @@ const challengeStatusConfig = {
 export default function ClientDetailView() {
   const params = useParams();
   const id = params.id as string;
-  const client = mockClientsData[id];
-
+  
+  const [client, setClient] = useState<ClientDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [showPkgModal, setShowPkgModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Formulaires
+  const [newPackage, setNewPackage] = useState({
+    name: "",
+    price: 0,
+    financing: "Full Pay" as "Full Pay" | "Split Pay x2" | "Split Pay x3" | "Split Pay x4" | "Split Pay x6" | "Split Pay x8" | "Split Pay x10"
+  });
+  const [newChallenge, setNewChallenge] = useState({
+    label: "",
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]
+  });
 
-  if (!client) {
+  useEffect(() => {
+    loadClient();
+  }, [id]);
+
+  const loadClient = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await getClientDetail(id);
+    if (result.success && result.data) {
+      setClient(result.data);
+    } else {
+      setError(result.error || "Client introuvable");
+    }
+    setLoading(false);
+  };
+
+  const handleAddPackage = async () => {
+    if (!newPackage.name.trim() || newPackage.price <= 0) {
+      alert("Veuillez remplir tous les champs");
+      return;
+    }
+    setSaving(true);
+    const result = await createPackage(id, newPackage);
+    setSaving(false);
+    if (result.success) {
+      await loadClient();
+      setShowPkgModal(false);
+      setNewPackage({ name: "", price: 0, financing: "Full Pay" });
+    } else {
+      alert(result.error);
+    }
+  };
+
+  const handleAddChallenge = async () => {
+    if (!newChallenge.startDate || !newChallenge.endDate) {
+      alert("Veuillez remplir les dates");
+      return;
+    }
+    setSaving(true);
+    const result = await createChallenge(id, newChallenge);
+    setSaving(false);
+    if (result.success) {
+      await loadClient();
+      setShowChallengeModal(false);
+      setNewChallenge({
+        label: "",
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]
+      });
+    } else {
+      alert(result.error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
+
+  if (error || !client) {
     return (
       <div className="text-center py-20" style={{ color: "hsl(var(--muted-foreground))" }}>
-        <p>Client introuvable</p>
+        <p>{error || "Client introuvable"}</p>
         <Link href="/clients" className="inline-block mt-2 underline" style={{ color: "hsl(var(--primary))" }}>
           Retour
         </Link>
@@ -216,6 +233,9 @@ export default function ClientDetailView() {
               </p>
             </div>
           ))}
+          {client.packages.length === 0 && (
+            <div className="text-muted-foreground text-sm">Aucun package pour le moment</div>
+          )}
         </div>
       </div>
 
@@ -281,10 +301,10 @@ export default function ClientDetailView() {
                     </div>
                     <div>
                       <p style={{ fontWeight: 500, color: "hsl(var(--foreground))" }}>
-                        Challenge #{ch.number} — {ch.label}
+                        Challenge #{ch.number} — {ch.label || "Sans titre"}
                       </p>
                       <p style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>
-                        {new Date(ch.startDate).toLocaleDateString("fr-FR")} → {new Date(ch.endDate).toLocaleDateString("fr-FR")}
+                        {ch.startDate ? new Date(ch.startDate).toLocaleDateString("fr-FR") : "?"} → {ch.endDate ? new Date(ch.endDate).toLocaleDateString("fr-FR") : "?"}
                       </p>
                     </div>
                   </div>
@@ -304,6 +324,9 @@ export default function ClientDetailView() {
               </Link>
             );
           })}
+          {client.challenges.length === 0 && (
+            <div className="text-muted-foreground text-sm">Aucun challenge pour le moment</div>
+          )}
         </div>
       </div>
 
@@ -360,6 +383,8 @@ export default function ClientDetailView() {
             <div className="space-y-3">
               <input
                 placeholder="Nom du package"
+                value={newPackage.name}
+                onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -374,6 +399,8 @@ export default function ClientDetailView() {
               <input
                 placeholder="Prix (€)"
                 type="number"
+                value={newPackage.price || ""}
+                onChange={(e) => setNewPackage({ ...newPackage, price: parseFloat(e.target.value) || 0 })}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -386,6 +413,8 @@ export default function ClientDetailView() {
                 }}
               />
               <select
+                value={newPackage.financing}
+                onChange={(e) => setNewPackage({ ...newPackage, financing: e.target.value as any })}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -402,9 +431,12 @@ export default function ClientDetailView() {
                 <option>Split Pay x3</option>
                 <option>Split Pay x4</option>
                 <option>Split Pay x6</option>
+                <option>Split Pay x8</option>
+                <option>Split Pay x10</option>
               </select>
               <button
-                onClick={() => setShowPkgModal(false)}
+                onClick={handleAddPackage}
+                disabled={saving}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -413,10 +445,11 @@ export default function ClientDetailView() {
                   fontWeight: 600,
                   borderRadius: radii.md,
                   border: "none",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  opacity: saving ? 0.7 : 1
                 }}
               >
-                Ajouter
+                {saving ? "Création..." : "Ajouter"}
               </button>
             </div>
           </div>
@@ -475,7 +508,9 @@ export default function ClientDetailView() {
             </h3>
             <div className="space-y-3">
               <input
-                placeholder="Label du challenge"
+                placeholder="Label du challenge (optionnel)"
+                value={newChallenge.label}
+                onChange={(e) => setNewChallenge({ ...newChallenge, label: e.target.value })}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -494,6 +529,8 @@ export default function ClientDetailView() {
                   </label>
                   <input
                     type="date"
+                    value={newChallenge.startDate}
+                    onChange={(e) => setNewChallenge({ ...newChallenge, startDate: e.target.value })}
                     style={{
                       width: "100%",
                       height: "2.5rem",
@@ -512,6 +549,8 @@ export default function ClientDetailView() {
                   </label>
                   <input
                     type="date"
+                    value={newChallenge.endDate}
+                    onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
                     style={{
                       width: "100%",
                       height: "2.5rem",
@@ -526,7 +565,8 @@ export default function ClientDetailView() {
                 </div>
               </div>
               <button
-                onClick={() => setShowChallengeModal(false)}
+                onClick={handleAddChallenge}
+                disabled={saving}
                 style={{
                   width: "100%",
                   height: "2.5rem",
@@ -535,10 +575,11 @@ export default function ClientDetailView() {
                   fontWeight: 600,
                   borderRadius: radii.md,
                   border: "none",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  opacity: saving ? 0.7 : 1
                 }}
               >
-                Créer
+                {saving ? "Création..." : "Créer"}
               </button>
             </div>
           </div>

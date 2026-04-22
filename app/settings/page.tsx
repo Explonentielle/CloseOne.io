@@ -1,20 +1,14 @@
-import AppLayout from "@/components/AppLayout";
+import PageLayout from "@/components/PageLayout";
 import SettingsView from "./SettingsView";
 import { syncUser } from "@/lib/syncUser";
 import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
-  const user = await syncUser();
 
-  if (!user) return null;
-
-  if (user.isNewUser) {
-    redirect("/profile");
-  }
 
   return (
-    <AppLayout>
+    <PageLayout>
       <SettingsView />
-    </AppLayout>
+    </PageLayout>
   );
 }

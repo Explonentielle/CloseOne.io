@@ -1,18 +1,10 @@
 "use client";
 
-import { Bell, ChevronDown, User, LogOut } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
+import { Bell, ChevronDown, User, LogOut, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-
-type Props = {
-  user: {
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-    avatarUrl: string | null;
-    role: string;
-  };
-};
+import { useClerk } from "@clerk/nextjs";
 
 const roleLabel: Record<string, string> = {
   CLOSER: "Closer",
@@ -21,11 +13,29 @@ const roleLabel: Record<string, string> = {
   USER: "Utilisateur",
 };
 
-export default function Header({ user }: Props) {
+export default function Header() {
+  const user = useUser();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { signOut } = useClerk();
 
+  // Gestion du cas non connecté
+  if (!user) {
+    return (
+      <header className="sticky top-0 z-50 h-14 border-b border-[hsl(var(--border))] bg-[hsl(var(--card)/0.7)] backdrop-blur-xl flex items-center justify-end px-6 shrink-0">
+        <button
+          onClick={() => router.push("/sign-in")}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+        >
+          <LogIn size={16} />
+          Se connecter
+        </button>
+      </header>
+    );
+  }
+
+  // Si user existe, on peut utiliser ses propriétés en toute sécurité
   const fullName =
     [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
@@ -110,16 +120,16 @@ export default function Header({ user }: Props) {
                 role="menuitem"
                 onClick={() => {
                   setOpen(false);
-                  router.push("/profile");
+                  router.push("/profil");
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))] transition-colors"
               >
                 <User size={14} />
                 Mon profil
               </button>
-
+              
               <button
-                // onClick={() => signOut(() => router.push("/sign-in"))}
+                onClick={() => signOut(() => router.push("/sign-in"))}
                 role="menuitem"
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--secondary))] transition-colors"
               >

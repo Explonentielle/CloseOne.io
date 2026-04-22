@@ -9,13 +9,13 @@ interface RadarAxis {
   max: number;
 }
 
-const defaultAxes: RadarAxis[] = [
-  { label: "Taux de closing", shortLabel: "Closing", value: 28, max: 30 },
-  { label: "Cash collecté", shortLabel: "Cash", value: 20, max: 25 },
-  { label: "Régularité", shortLabel: "Régularité", value: 16, max: 20 },
-  { label: "Temps signature", shortLabel: "Temps", value: 11, max: 15 },
-  { label: "Objectifs atteints", shortLabel: "Objectifs", value: 7, max: 10 },
-];
+interface MonthlyScore {
+  scoreC1?: number; // Taux de closing (max 30)
+  scoreC2?: number; // Cash collecté (max 25)
+  scoreC3?: number; // Régularité (max 20)
+  scoreC4?: number; // Temps de signature (max 15)
+  scoreC5?: number; // Objectifs mensuels (max 10)
+}
 
 const SIZE = 280;
 const CX = SIZE / 2;
@@ -47,11 +47,31 @@ function gridPolygon(n: number, radius: number) {
 }
 
 interface Props {
-  axes?: RadarAxis[];
+  scores?: MonthlyScore | null;
   className?: string;
 }
 
-const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
+// Ordre des axes : C1, C2, C3, C4, C5
+const defaultAxes: RadarAxis[] = [
+  { label: "Taux de closing", shortLabel: "Closing", value: 0, max: 30 },
+  { label: "Cash collecté", shortLabel: "Cash", value: 0, max: 25 },
+  { label: "Régularité", shortLabel: "Régularité", value: 0, max: 20 },
+  { label: "Temps signature", shortLabel: "Temps", value: 0, max: 15 },
+  { label: "Objectifs atteints", shortLabel: "Objectifs", value: 0, max: 10 },
+];
+
+const CloseScoreRadar = ({ scores, className = "" }: Props) => {
+  const axes = useMemo(() => {
+    if (!scores) return defaultAxes;
+    return [
+      { ...defaultAxes[0], value: scores.scoreC1 ?? 0 },
+      { ...defaultAxes[1], value: scores.scoreC2 ?? 0 },
+      { ...defaultAxes[2], value: scores.scoreC3 ?? 0 },
+      { ...defaultAxes[3], value: scores.scoreC4 ?? 0 },
+      { ...defaultAxes[4], value: scores.scoreC5 ?? 0 },
+    ];
+  }, [scores]);
+
   const values = axes.map((a) => a.value);
   const maxValues = axes.map((a) => a.max);
 
@@ -61,7 +81,7 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
         const angle = (360 / axes.length) * i;
         return polarToXY(angle, R + 32);
       }),
-    [axes],
+    [axes.length]
   );
 
   const dotPositions = useMemo(
@@ -71,13 +91,13 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
         const angle = (360 / axes.length) * i;
         return polarToXY(angle, R * pct);
       }),
-    [axes],
+    [axes]
   );
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {/* Grid lines */}
+        {/* Grille */}
         <polygon
           points={gridPolygon(5, R)}
           fill="none"
@@ -92,7 +112,7 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
           strokeDasharray="4 3"
         />
 
-        {/* Axis lines */}
+        {/* Lignes des axes */}
         {axes.map((_, i) => {
           const angle = (360 / axes.length) * i;
           const { x, y } = polarToXY(angle, R);
@@ -109,7 +129,7 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
           );
         })}
 
-        {/* Score area */}
+        {/* Zone du score */}
         <polygon
           points={polygonPoints(values, maxValues, R)}
           fill="hsl(var(--primary) / 0.2)"
@@ -117,7 +137,7 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
           strokeWidth="1.5"
         />
 
-        {/* Dots */}
+        {/* Points */}
         {dotPositions.map((pos, i) => (
           <circle
             key={i}
@@ -128,7 +148,7 @@ const CloseScoreRadar = ({ axes = defaultAxes, className = "" }: Props) => {
           />
         ))}
 
-        {/* Labels */}
+        {/* Labels + valeurs */}
         {labelPositions.map((pos, i) => (
           <g key={i}>
             <text

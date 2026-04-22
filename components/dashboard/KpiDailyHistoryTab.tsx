@@ -1,51 +1,104 @@
 "use client";
 
-const dailyHistory = [
-  { date: "31 mars 2026", r1: "3/4", r2: "1/2", closes: 1, cash: 300, taux: 33, status: "good" },
-  { date: "28 mars 2026", r1: "4/4", r2: "2/2", closes: 2, cash: 1800, taux: 50, status: "good" },
-  { date: "27 mars 2026", r1: "2/5", r2: "1/3", closes: 0, cash: 0, taux: 0, status: "bad" },
-];
+import { useUser } from "@/contexts/UserContext";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export default function KpiDailyHistoryTab() {
+  const user= useUser();
+  
+  // Récupérer toutes les entrées journalières de tous les challenges
+  const allDailyEntries = user?.challenges?.flatMap(challenge => 
+    challenge.dailyEntries.map(entry => ({
+      ...entry,
+      challengeLabel: challenge.label || `Challenge #${challenge.numero}`,
+    }))
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [];
+
+  const getStatus = (entry: any) => {
+    if (entry.nbCloses > 0) return "good";
+    if (entry.r1Effectue >= entry.r1Planifie && entry.r1Planifie > 0) return "good";
+    return "bad";
+  };
+
+  const getTauxClosing = (entry: any) => {
+    if (entry.r1Effectue === 0) return 0;
+    return Math.round((entry.nbCloses / entry.r1Effectue) * 100);
+  };
+
+  if (allDailyEntries.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg p-5 bg-[hsl(var(--card))] border border-[hsl(var(--border)/0.3)] text-center">
+          <p className="text-[hsl(var(--muted-foreground))]">Aucune saisie journalière pour le moment.</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">
+            Utilise le bouton KPI Daily pour ajouter ta première journée
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg p-5 bg-[hsl(var(--card))] border border-[hsl(var(--border)/0.3)]">
         <h3 className="font-semibold text-[hsl(var(--foreground))] mb-1">Historique KPI Daily</h3>
         <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-          Utilise le bouton KPI Daily pour ajouter ta journée
+          {allDailyEntries.length} journée(s) enregistrée(s)
         </p>
 
         <div className="space-y-3">
-          {dailyHistory.map((day) => (
-            <div key={day.date} className={`p-4 rounded-lg ${day.status === 'good' ? 'bg-[hsl(var(--primary)/0.05)]' : 'bg-[hsl(var(--background))]'}`}>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-[hsl(var(--muted-foreground))] min-w-[100px]">{day.date}</span>
+          {allDailyEntries.map((entry) => {
+            const status = getStatus(entry);
+            const tauxClosing = getTauxClosing(entry);
+            const date = new Date(entry.date);
+            
+            return (
+              <div 
+                key={entry.id} 
+                className={`p-4 rounded-lg ${status === 'good' ? 'bg-[hsl(var(--primary)/0.05)]' : 'bg-[hsl(var(--background))]'}`}
+              >
+                <div className="flex justify-between items-center flex-wrap gap-3">
+                  <div>
+                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
+                      {format(date, 'EEEE d MMMM yyyy', { locale: fr })}
+                    </span>
+                    <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">
+                      {entry.challengeLabel}
+                    </span>
+                  </div>
 
-                <div className="flex gap-4">
-                  {[
-                    { label: "R1", value: day.r1 },
-                    { label: "R2", value: day.r2 },
-                    { label: "Closes", value: day.closes },
-                    { label: "Cash", value: `${day.cash}€` },
-                    { label: "Taux", value: `${day.taux}%` },
-                  ].map((stat) => (
-                    <div key={stat.label} className="text-center">
-                      <div className="text-xs text-[hsl(var(--muted-foreground))]">{stat.label}</div>
-                      <div className="font-semibold text-[hsl(var(--foreground))]">{stat.value}</div>
-                    </div>
-                  ))}
+                  <div className="flex gap-4 flex-wrap">
+                    {[
+                      { label: "R1", value: `${entry.r1Effectue}/${entry.r1Planifie}` },
+                      { label: "R2", value: `${entry.r2Effectue}/${entry.r2Planifie}` },
+                      { label: "Closes", value: entry.nbCloses },
+                      { label: "Taux", value: `${tauxClosing}%` },
+                    ].map((stat) => (
+                      <div key={stat.label} className="text-center min-w-[60px]">
+                        <div className="text-xs text-[hsl(var(--muted-foreground))]">{stat.label}</div>
+                        <div className="font-semibold text-[hsl(var(--foreground))]">{stat.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    status === 'good'
+                      ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))]'
+                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+                  }`}>
+                    {status === 'good' ? "✅ Bonne journée" : "⚠️ À améliorer"}
+                  </span>
                 </div>
 
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  day.status === 'good'
-                    ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))]'
-                    : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
-                }`}>
-                  {day.status === 'good' ? "Bonne journée" : "À améliorer"}
-                </span>
+                {entry.sentiment && (
+                  <div className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
+                    Sentiment: {entry.sentiment}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

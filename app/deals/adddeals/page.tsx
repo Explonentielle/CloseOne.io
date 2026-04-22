@@ -1,10 +1,10 @@
-import AppLayout from "@/components/AppLayout";
+import PageLayout from "@/components/PageLayout";
 import AddDeal from "./AddDeal";
 
 export default function NewDealPage() {
   return (
-    <AppLayout>
+    <PageLayout>
       <AddDeal />
-    </AppLayout>
+    </PageLayout>
   );
 }

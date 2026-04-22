@@ -1,10 +1,10 @@
-import AppLayout from "@/components/AppLayout";
+import PageLayout from "@/components/PageLayout";
 import DealsView from "./DealsView";
 
 export default function DealsPage() {
   return (
-    <AppLayout>
+    <PageLayout>
       <DealsView />
-    </AppLayout>
+    </PageLayout>
   );
 }
