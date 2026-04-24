@@ -16,17 +16,17 @@ const getScoreInfo = (score: number) => {
 };
 
 const experienceLabel: Record<string, string> = {
-  MOINS_1_AN:     "Moins d'1 an",
-  UN_AN:          '1 an',
-  DEUX_ANS:       '2 ans',
+  MOINS_1_AN: "Moins d'1 an",
+  UN_AN: '1 an',
+  DEUX_ANS: '2 ans',
   TROIS_ANS_PLUS: '3 ans et plus',
 };
 
 const roleLabel: Record<string, string> = {
-  CLOSER:  'Closer',
+  CLOSER: 'Closer',
   MANAGER: 'Manager',
-  ADMIN:   'Admin',
-  USER:    'Utilisateur',
+  ADMIN: 'Admin',
+  USER: 'Utilisateur',
 };
 
 export default function ProfilView() {
@@ -38,19 +38,19 @@ export default function ProfilView() {
 
   const trackUrl = `https://closeone.io/track/${user.publicSlug ?? user.id}`;
 
-  const metrics     = user.metrics;
-  const caMensuel   = metrics?.monthlyRevenue ?? 0;
-  const caTotal     = metrics?.totalRevenue   ?? 0;
+  const metrics = user.metrics;
+  const caMensuel = metrics?.monthlyRevenue ?? 0;
+  const caTotal = metrics?.totalRevenue   ?? 0;
   const dealsTotal  = metrics?.totalDeals     ?? 0;
   const tauxClosing = metrics?.totalDeals
     ? Math.round((metrics.wonDeals / metrics.totalDeals) * 100)
     : 0;
 
-  const lastScore  = user.monthlyScores?.[0];
+  const lastScore = user.monthlyScores?.[0];
   const closeScore = lastScore?.scoreFinal ?? 0;
-  const scoreInfo  = getScoreInfo(closeScore);
+  const scoreInfo = getScoreInfo(closeScore);
 
-  const allDeals   = user.challenges.flatMap(c => c.deals);
+  const allDeals = user.challenges.flatMap(c => c.deals);
   const fullPayPct = allDeals.length
     ? Math.round((allDeals.filter(d => d.typeVente === 'FULL_PAY').length / allDeals.length) * 100)
     : 0;
@@ -161,10 +161,10 @@ export default function ProfilView() {
             <h3 className="font-semibold text-[22px] mb-4" style={{ color: 'hsl(var(--foreground))' }}>Performance</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Trophy,     label: 'CA Mensuel',   value: `${caMensuel.toLocaleString('fr-FR')}€` },
-                { icon: Target,     label: 'CA Total',     value: `${caTotal.toLocaleString('fr-FR')}€` },
-                { icon: TrendingUp, label: 'Deals Total',  value: String(dealsTotal) },
-                { icon: Users,      label: 'Taux closing', value: `${tauxClosing}%` },
+                { icon: Trophy, label: 'CA Mensuel', value: `${caMensuel.toLocaleString('fr-FR')}€` },
+                { icon: Target, label: 'CA Total', value: `${caTotal.toLocaleString('fr-FR')}€` },
+                { icon: TrendingUp, label: 'Deals Total', value: String(dealsTotal) },
+                { icon: Users, label: 'Taux closing', value: `${tauxClosing}%` },
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <s.icon size={20} className="mx-auto mb-2" style={{ color: 'hsl(var(--muted-foreground))' }} />
@@ -207,11 +207,11 @@ export default function ProfilView() {
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
         defaultValues={{
-          firstName:    user.firstName    ?? '',
-          lastName:     user.lastName     ?? '',
-          telephone:    user.telephone    ?? '',
+          firstName: user.firstName ?? '',
+          lastName: user.lastName ?? '',
+          telephone: user.telephone ?? '',
           localisation: user.localisation ?? '',
-          experience:   user.experience   ?? null,
+          experience: user.experience ?? null,
         }}
       />
     </div>

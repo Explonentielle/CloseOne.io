@@ -7,9 +7,10 @@ import { z } from "zod";
 
 // Schémas de validation
 const InfopreneurSchema = z.object({
-  name: z.string().min(1, "Nom requis"),
-  nicheId: z.string().min(1, "Niche requise"),
+  name: z.string().min(1),
+  nicheId: z.string().min(1),
   status: z.enum(["Actif", "Inactif"]),
+  logo: z.string().nullable().optional(),
 });
 
 const NicheSchema = z.object({
@@ -127,6 +128,7 @@ export async function createInfopreneur(data: InfopreneurInput) {
         nom: parsed.data.name,
         nicheId: parsed.data.nicheId,
         actif: parsed.data.status === "Actif",
+        logo: parsed.data.logo || null,   // ajout
         isCustom: true,
         createdByUserId: user.id,
       },

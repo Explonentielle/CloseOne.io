@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getAllInfopreneurs, createInfopreneur, getNiches } from "@/app/actions/ClientsActions";
+import CreateInfopreneurModal from "@/components/client/CreateClientModal";
+
 
 interface Niche {
   id: string;
@@ -96,17 +98,19 @@ export default function ClientsView() {
       c.niche.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleCreateInfopreneur = async () => {
-    if (!newInfopreneur.name.trim() || !newInfopreneur.nicheId) return;
+  const handleCreateInfopreneur = async (data: {
+    name: string;
+    nicheId: string;
+    status: "Actif" | "Inactif";
+    logo?: string | null;
+  }) => {
     setSaving(true);
-    const result = await createInfopreneur(newInfopreneur);
+    const result = await createInfopreneur(data);
     setSaving(false);
     if (result.success) {
-      // Recharger la liste des infopreneurs
       const refreshed = await getAllInfopreneurs();
       if (refreshed.success && refreshed.data) setAllInfos(refreshed.data);
       setShowModal(false);
-      setNewInfopreneur({ name: "", nicheId: niches[0]?.id || "", status: "Actif" });
     } else {
       alert(result.error);
     }
@@ -235,7 +239,7 @@ export default function ClientsView() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <UserPlus size={18} className="text-muted-foreground" />
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-lg font-semibold blue">
               Clients disponibles
               <span className="ml-2 text-xs text-muted-foreground font-normal">
                 ({filteredAvailable.length})
@@ -244,10 +248,10 @@ export default function ClientsView() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1 text-xs bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/30 transition"
+            className="inline-flex items-center gap-1 text-xs bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/30 transition blue"
           >
             <PlusCircle size={14} />
-            Créer un infopreneur personnalisé
+            Créer un client personnalisé
           </button>
         </div>
 
@@ -316,79 +320,13 @@ export default function ClientsView() {
         )}
       </div>
 
-      {/* Modal de création personnalisée */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowModal(false)}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative bg-card rounded-xl p-6 w-full max-w-md border border-border/30" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground"
-            >
-              <X size={18} />
-            </button>
-            <h3 className="text-lg font-bold mb-4">Créer un infopreneur personnalisé</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Nom</label>
-                <input
-                  placeholder="Ex: Nouvel Infopreneur"
-                  value={newInfopreneur.name}
-                  onChange={(e) => setNewInfopreneur({ ...newInfopreneur, name: e.target.value })}
-                  className="input-base w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Niche</label>
-                <select
-                  value={newInfopreneur.nicheId}
-                  onChange={(e) => setNewInfopreneur({ ...newInfopreneur, nicheId: e.target.value })}
-                  className="input-base w-full"
-                >
-                  <option value="">Sélectionner une niche</option>
-                  {niches.map(n => (
-                    <option key={n.id} value={n.id}>{n.nom}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Statut</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setNewInfopreneur({ ...newInfopreneur, status: "Actif" })}
-                    className={`flex-1 py-2 rounded-lg border transition ${
-                      newInfopreneur.status === "Actif"
-                        ? "bg-primary/15 text-primary border-primary/30"
-                        : "bg-background border-border"
-                    }`}
-                  >
-                    Actif
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewInfopreneur({ ...newInfopreneur, status: "Inactif" })}
-                    className={`flex-1 py-2 rounded-lg border transition ${
-                      newInfopreneur.status === "Inactif"
-                        ? "bg-primary/15 text-primary border-primary/30"
-                        : "bg-background border-border"
-                    }`}
-                  >
-                    Inactif
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={handleCreateInfopreneur}
-                disabled={saving}
-                className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition disabled:opacity-50"
-              >
-                {saving ? "Création..." : "Créer l'infopreneur"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateInfopreneurModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        niches={niches}
+        onCreate={handleCreateInfopreneur}
+        loading={saving}
+      />
     </div>
   );
 }

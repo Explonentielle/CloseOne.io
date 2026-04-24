@@ -1,38 +1,66 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
+import type { Prisma } from "@prisma/client";
 
 export const getFullUser = cache(async () => {
   const { userId } = await auth();
   if (!userId) return null;
 
-  // Tente de récupérer l'user avec toutes ses relations en une seule requête
-  const existingUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: {
-      metrics: true,
-      challenges: {
-        include: {
-          deals: true,
-          dailyEntries: true,
-          infopreneur: {
-            include: { niche: true },
+  // Inclusion complète avec tous les niveaux de relations
+  const includeOptions: Prisma.UserInclude = {
+    metrics: true,
+    challenges: {
+      include: {
+        deals: {
+          include: {
+            package: {
+              include: {
+                infopreneur: {
+                  include: {
+                    niche: true,
+                  },
+                },
+              },
+            },
           },
         },
-        orderBy: { createdAt: "desc" },
+        dailyEntries: true,
+        infopreneur: {
+          include: {
+            niche: true,
+          },
+        },
       },
-      objectives: { orderBy: { createdAt: "desc" } },
-      monthlyScores: { orderBy: { mois: "desc" } },
-      niches: true,
+      orderBy: {
+        createdAt: "desc" as const,
+      },
     },
+    objectives: {
+      orderBy: {
+        createdAt: "desc" as const,
+      },
+    },
+    monthlyScores: {
+      orderBy: {
+        mois: "desc" as const,
+      },
+    },
+    niches: true,
+  };
+
+  // Récupération de l'utilisateur existant
+  const existingUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    include: includeOptions,
   });
 
-  // Profil complet → retourne directement, 0 appel Clerk
+  // Si le profil est déjà complet, on le retourne
   if (existingUser?.firstName && existingUser?.lastName) {
     return existingUser;
   }
 
-  // Nouvel utilisateur ou profil incomplet → appel Clerk pour compléter
+  // Sinon, on complète avec les données Clerk
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
 
@@ -51,29 +79,13 @@ export const getFullUser = cache(async () => {
       lastName: clerkUser.lastName,
       avatarUrl: clerkUser.imageUrl,
     },
-    include: {
-      metrics: true,
-      challenges: {
-        include: { 
-          deals: true,
-          dailyEntries: true,
-          infopreneur: {
-            include: { niche: true }
-          }
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      objectives: { orderBy: { createdAt: "desc" } },
-      monthlyScores: { orderBy: { mois: "desc" } },
-      niches: true,
-    },
+    include: includeOptions,
   });
 
   return upserted;
 });
 
-// Alias léger pour les endroits qui ont juste besoin de savoir si l'user existe
-// sans les relations — utilise le cache de getFullUser, pas de requête supplémentaire
+// Alias pour n'avoir que les infos de base (sans les relations)
 export const syncUser = cache(async () => {
   const user = await getFullUser();
   if (!user) return null;

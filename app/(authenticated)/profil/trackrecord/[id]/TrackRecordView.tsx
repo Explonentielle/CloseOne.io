@@ -3,13 +3,13 @@
 import { Zap, Shield } from "lucide-react";
 import CloseScoreRadar from "@/components/dashboard/CloseScoreRadar";
 import { getScoreInfo } from "@/components/dashboard/CloseScoreCard";
-import { FullUser, useUser } from "@/contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 
 export default function TrackRecordView() {
-    const user = useUser();
-    if (!user) return null;
+  const user = useUser();
+  if (!user) return null;
 
-  // Données utilisateur
+  // Données utilisateur (profil)
   const fullName =
     [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const initials =
@@ -21,43 +21,84 @@ export default function TrackRecordView() {
     ADMIN: "Admin",
     USER: "Utilisateur",
   };
+
   const role = roleLabel[user.role] ?? user.role;
   const experience = user.experience ?? "Expérience non renseignée";
-  const city = user.city ?? "Localisation non renseignée";
+  const city = user.localisation ?? "Localisation non renseignée";
 
-  // Métriques
-  const metrics = user.metrics;
-  const closeScore = metrics?.closeScore ?? 50;
+  // Récupération du dernier Close Score (via monthlyScores)
+  const lastMonthlyScore = user.monthlyScores?.[0];
+  const closeScore = lastMonthlyScore?.scoreFinal ?? 50;
   const scoreInfo = getScoreInfo(closeScore);
+
+  // Métriques globales
+  const metrics = user.metrics;
   const tauxClosing = metrics?.totalDeals
     ? Math.round((metrics.wonDeals / metrics.totalDeals) * 100)
     : 0;
+
   const cashGenere = metrics?.totalRevenue ?? 0;
   const panierMoyen = metrics?.totalDeals
     ? Math.round(metrics.totalRevenue / metrics.totalDeals)
     : 0;
+
   const delaiMoyen = 2.4; // À calculer selon tes données
   const cashContracte = metrics?.totalRevenue ?? 0;
-  const cashCollecte = metrics?.collectedRevenue ?? 0; // À adapter si champ différent
 
-  // Deals et répartition FullPay / SplitPay
-  const deals = user.deals ?? [];
-  const fullPayPct = deals.length
+  // Récupération de tous les deals depuis les challenges
+  const allDeals = user.challenges?.flatMap((c) => c.deals) ?? [];
+  const cashCollecte = allDeals.reduce(
+    (sum, deal) => sum + (deal.montantCollecte ?? 0),
+    0
+  );
+
+  // Répartition Full Pay / Split Pay
+  const fullPayPct = allDeals.length
     ? Math.round(
-        (deals.filter((d) => d.paymentType === "FULL_PAY").length /
-          deals.length) *
-          100,
+        (allDeals.filter((d) => d.typeVente === "FULL_PAY").length /
+          allDeals.length) *
+          100
       )
     : 65;
 
-  // Données supplémentaires (à remplacer par des données réelles)
-  const nichePerf: { niche: string; ca: number; taux: number }[] = [];
-  const challenges: {
-    client: string;
-    label: string;
-    closes: number;
-    cash: number;
-  }[] = [];
+  // ---------- Performances par niche (données réelles) ----------
+  const nicheMap = new Map<string, { ca: number; closes: number }>();
+  for (const deal of allDeals) {
+    const pkg = deal.package;
+    const infopreneur = pkg?.infopreneur;
+    const nicheNom = infopreneur?.niche?.nom;
+    if (nicheNom) {
+      const existing = nicheMap.get(nicheNom) ?? { ca: 0, closes: 0 };
+      existing.ca += deal.montantContracte ?? 0;
+      existing.closes += 1;
+      nicheMap.set(nicheNom, existing);
+    }
+  }
+  const nichePerf = Array.from(nicheMap.entries()).map(([niche, data]) => ({
+    niche,
+    ca: data.ca,
+    taux: 0, // À calculer si tu disposes du nombre total de deals par niche (gagnés + perdus)
+  }));
+  nichePerf.sort((a, b) => b.ca - a.ca);
+
+  // ---------- Historique challenges (données réelles) ----------
+  const challenges = (user.challenges ?? [])
+    .map((challenge) => {
+      const infopreneur = challenge.infopreneur;
+      const clientName = infopreneur?.nom ?? "Client inconnu";
+      const label = challenge.label ?? `Challenge #${challenge.numero}`;
+      const closes = challenge.deals?.length ?? 0;
+      const cash = challenge.deals?.reduce(
+        (sum, deal) => sum + (deal.montantContracte ?? 0),
+        0
+      ) ?? 0;
+      return { client: clientName, label, closes, cash };
+    })
+    .sort((a, b) => b.cash - a.cash);
+
+    console.log("allDeals:", allDeals);
+console.log("first deal:", allDeals[0]);
+console.log("deal.package:", allDeals[0]?.package);
 
   return (
     <div
@@ -191,7 +232,7 @@ export default function TrackRecordView() {
               padding: "1.5rem",
             }}
           >
-            <CloseScoreRadar />
+            <CloseScoreRadar scores={lastMonthlyScore ?? null} />
           </div>
           <div
             style={{
@@ -432,7 +473,7 @@ export default function TrackRecordView() {
           </div>
         </div>
 
-        {/* Performances par niche (optionnel) */}
+        {/* Performances par niche (affiché uniquement si des données existent) */}
         {nichePerf.length > 0 && (
           <div>
             <h3
@@ -494,7 +535,7 @@ export default function TrackRecordView() {
           </div>
         )}
 
-        {/* Historique challenges (optionnel) */}
+        {/* Historique challenges (affiché uniquement si des challenges existent) */}
         {challenges.length > 0 && (
           <div>
             <h3

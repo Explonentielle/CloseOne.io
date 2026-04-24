@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ExperienceClosing } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { ProfileFormData, updateProfile } from "@/app/actions/UpdateProfile";
+import { ProfileFormData, updateProfile } from "@/app/actions/profilAction";
 
 interface EditProfilModalProps {
   open: boolean;
@@ -12,9 +12,9 @@ interface EditProfilModalProps {
 }
 
 const experienceOptions: { value: ExperienceClosing; label: string }[] = [
-  { value: "MOINS_1_AN",     label: "Moins d'1 an" },
-  { value: "UN_AN",          label: "1 an" },
-  { value: "DEUX_ANS",       label: "2 ans" },
+  { value: "MOINS_1_AN", label: "Moins d'1 an" },
+  { value: "UN_AN", label: "1 an" },
+  { value: "DEUX_ANS", label: "2 ans" },
   { value: "TROIS_ANS_PLUS", label: "3 ans et plus" },
 ];
 

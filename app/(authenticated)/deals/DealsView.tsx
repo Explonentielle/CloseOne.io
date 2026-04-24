@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -10,84 +10,18 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@/contexts/UserContext";
 
 type DealStatus = "En cours" | "Gagné" | "Perdu";
 
 interface Deal {
-  id: number;
+  id: string;
   name: string;
   client: string;
   amount: number;
   commission: number;
   status: DealStatus;
 }
-
-const mockDeals: Deal[] = [
-  {
-    id: 1,
-    name: "Contrat SaaS Premium",
-    client: "TechCorp",
-    amount: 24000,
-    commission: 2400,
-    status: "Gagné",
-  },
-  {
-    id: 2,
-    name: "Licence Enterprise",
-    client: "DataFlow",
-    amount: 18500,
-    commission: 1850,
-    status: "Gagné",
-  },
-  {
-    id: 3,
-    name: "Consulting Pack",
-    client: "StartupXYZ",
-    amount: 8000,
-    commission: 960,
-    status: "En cours",
-  },
-  {
-    id: 4,
-    name: "Formation Équipe",
-    client: "MegaRetail",
-    amount: 12000,
-    commission: 1200,
-    status: "En cours",
-  },
-  {
-    id: 5,
-    name: "Setup Infrastructure",
-    client: "CloudNine",
-    amount: 35000,
-    commission: 3500,
-    status: "Gagné",
-  },
-  {
-    id: 6,
-    name: "Migration Cloud",
-    client: "OldSchool Inc",
-    amount: 15000,
-    commission: 1500,
-    status: "Perdu",
-  },
-  {
-    id: 7,
-    name: "Audit Sécurité",
-    client: "SecureBank",
-    amount: 22000,
-    commission: 2640,
-    status: "En cours",
-  },
-  {
-    id: 8,
-    name: "API Integration",
-    client: "FinTechPro",
-    amount: 9500,
-    commission: 950,
-    status: "Gagné",
-  },
-];
 
 function StatusBadge({ status }: { status: DealStatus }) {
   const config = {
@@ -123,12 +57,55 @@ function StatusBadge({ status }: { status: DealStatus }) {
 }
 
 export default function DealsView() {
+  const user = useUser();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<DealStatus | "Tous">("Tous");
   const [sortBy, setSortBy] = useState<"amount" | "commission" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const filtered = mockDeals
+  // Transformation des données utilisateur en liste de deals
+  const userDeals = useMemo<Deal[]>(() => {
+    if (!user?.challenges) return [];
+
+    const deals: Deal[] = [];
+
+    for (const challenge of user.challenges) {
+      const infopreneur = challenge.infopreneur;
+      const clientName = infopreneur?.nom ?? "Client inconnu";
+      // Déterminer le statut du deal à partir du statut du challenge
+      let status: DealStatus = "En cours";
+      if (challenge.statut === "TERMINE") status = "Gagné";
+      else if (challenge.statut === "EN_COURS") status = "En cours";
+      else if (challenge.statut === "A_VENIR") status = "En cours";
+      // Par défaut, on ne met pas de "Perdu" car non géré
+
+      if (challenge.deals && challenge.deals.length > 0) {
+        for (const deal of challenge.deals) {
+          // Nom du deal : on combine le nom du package (s'il existe) et le label du challenge
+          const packageName = deal.package?.nomPackage ?? "Deal";
+          const dealName = `${packageName} - ${challenge.label ?? `Challenge #${challenge.numero}`}`;
+
+          // Commission par défaut : 10% du montant contracté (à adapter selon ton modèle)
+          const commission = deal.montantContracte * 0.1;
+
+          deals.push({
+            id: deal.id,
+            name: dealName,
+            client: clientName,
+            amount: deal.montantContracte,
+            commission: commission,
+            status: status,
+          });
+        }
+      } else {
+        // Si aucun deal n'est associé au challenge, on peut créer un deal fictif ?
+        // Par défaut on ne fait rien. Sinon on peut ignorer.
+      }
+    }
+    return deals;
+  }, [user]);
+
+  const filtered = userDeals
     .filter((d) => filterStatus === "Tous" || d.status === filterStatus)
     .filter(
       (d) =>
@@ -150,12 +127,18 @@ export default function DealsView() {
     }
   };
 
-  const totalCA = mockDeals
+  const totalCA = userDeals
     .filter((d) => d.status === "Gagné")
     .reduce((s, d) => s + d.amount, 0);
-  const totalComm = mockDeals
+  const totalComm = userDeals
     .filter((d) => d.status === "Gagné")
     .reduce((s, d) => s + d.commission, 0);
+  const totalDealsCount = userDeals.length;
+  const tauxClosing = totalDealsCount
+    ? Math.round((userDeals.filter(d => d.status === "Gagné").length / totalDealsCount) * 100)
+    : 0;
+
+  if (!user) return <div className="py-20 text-center">Chargement...</div>;
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -183,7 +166,7 @@ export default function DealsView() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Deals", value: mockDeals.length, color: "foreground" },
+          { label: "Total Deals", value: totalDealsCount, color: "foreground" },
           {
             label: "CA Gagné",
             value: `€${(totalCA / 1000).toFixed(0)}K`,
@@ -196,7 +179,7 @@ export default function DealsView() {
           },
           {
             label: "Taux de closing",
-            value: `${Math.round((mockDeals.filter((d) => d.status === "Gagné").length / mockDeals.length) * 100)}%`,
+            value: `${tauxClosing}%`,
             color: "foreground",
           },
         ].map((s) => (
@@ -307,7 +290,7 @@ export default function DealsView() {
                 <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
                   Statut
                 </th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
               {sorted.map((d) => (

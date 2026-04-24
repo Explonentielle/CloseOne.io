@@ -1,13 +1,18 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { User, UserMetrics, Challenge, Deal, Objective, MonthlyScore, Niche, DailyEntry, Infopreneur} from '@prisma/client';
-
+import { User, UserMetrics, Challenge, Deal, Objective, MonthlyScore, Niche, DailyEntry, Infopreneur, Package } from '@prisma/client';
 
 export type FullUser = User & {
   metrics: UserMetrics | null;
   challenges: (Challenge & {
-    deals: Deal[];
+    deals: (Deal & {
+      package: (Package & {
+        infopreneur: Infopreneur & {
+          niche: Niche;
+        };
+      }) | null;
+    })[];
     dailyEntries: DailyEntry[];
     infopreneur: Infopreneur & { niche: Niche };
   })[];
