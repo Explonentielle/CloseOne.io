@@ -205,14 +205,13 @@ model Deal {
   id               String         @id @default(cuid())
   challengeId      String?
   packageId        String?
-  prenomClient     String?
   montantContracte Float          @default(0)
   montantCollecte  Float          @default(0)
   typeVente        SaleType?
   nbMensualites    NbMensualites?
   dateR1           DateTime?
+  dateR2           DateTime?
   dateClose        DateTime?
-  closeEn          CloseRound?
   delaiConversion  Int?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
