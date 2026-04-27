@@ -19,7 +19,6 @@ import { createDeal } from "@/app/actions/DealAction";
 import { getPackagesByInfopreneur } from "@/app/actions/PackageAction";
 
 type SaleType = "FULL_PAY" | "SPLIT_PAY";
-type CloseRound = "R1" | "R2";
 type NbMensualites = "X2" | "X3" | "X4" | "X6" | "X8" | "X10";
 
 interface InfopreneurOption {
@@ -62,7 +61,6 @@ export default function AddDeal() {
   const [dateR1, setDateR1] = useState("");
   const [dateR2, setDateR2] = useState("");
   const [delaiConversion, setDelaiConversion] = useState("");
-  const [closeEn, setCloseEn] = useState<CloseRound>("R1");
 
   const inputClass =
     "w-full h-11 rounded-lg px-4 text-sm transition-all focus:outline-none focus:ring-2";
@@ -193,6 +191,16 @@ export default function AddDeal() {
   const isR1Mode = !!dateR1 && !dateR2;
   const showTypeVente = !dateR2 && parseInt(montantContracte) > 0;
 
+  const closeEnAuto = dateR2 ? "R2" : dateR1 ? "R1" : "R1";
+
+  const maxSlider = parseInt(montantContracte) || 0;
+  const currentSliderValue = parseInt(montantCollecte) || 0;
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setMontantCollecte(value.toString());
+  };
+
   if (!user) return <div className="py-20 text-center">Chargement...</div>;
 
   return (
@@ -206,10 +214,16 @@ export default function AddDeal() {
           <ArrowLeft size={16} /> Retour
         </button>
         <div className="text-center">
-          <h2 className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>
+          <h2
+            className="text-2xl font-bold"
+            style={{ color: "hsl(var(--foreground))" }}
+          >
             Nouveau deal
           </h2>
-          <p className="text-sm mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
             Renseignez les informations de la vente
           </p>
         </div>
@@ -224,9 +238,13 @@ export default function AddDeal() {
         }}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Client + Package */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <label
+                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 <Users size={14} /> Client *
               </label>
               <select
@@ -244,17 +262,35 @@ export default function AddDeal() {
                 ))}
               </select>
               {selectedInfopreneur && (
-                <div className="mt-1 text-xs flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <div
+                  className="mt-1 text-xs flex items-center gap-1"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
                   {selectedInfopreneur.actif ? (
-                    <><CheckCircle size={12} style={{ color: "hsl(var(--primary))" }} /> Client actif</>
+                    <>
+                      <CheckCircle
+                        size={12}
+                        style={{ color: "hsl(var(--primary))" }}
+                      />{" "}
+                      Client actif
+                    </>
                   ) : (
-                    <><HelpCircle size={12} style={{ color: "hsl(var(--warning))" }} /> Client inactif</>
+                    <>
+                      <HelpCircle
+                        size={12}
+                        style={{ color: "hsl(var(--warning))" }}
+                      />{" "}
+                      Client inactif
+                    </>
                   )}
                 </div>
               )}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <label
+                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 <Tag size={14} /> Package *
               </label>
               <select
@@ -273,15 +309,24 @@ export default function AddDeal() {
                 ))}
               </select>
               {selectedPackage && (
-                <div className="mt-1 text-xs" style={{ color: "hsl(var(--primary))" }}>
-                  {selectedPackage.financementDisponible ? "✓ Financement possible" : "✓ Uniquement Full Pay"}
+                <div
+                  className="mt-1 text-xs"
+                  style={{ color: "hsl(var(--primary))" }}
+                >
+                  {selectedPackage.financementDisponible
+                    ? "✓ Financement possible"
+                    : "✓ Uniquement Full Pay"}
                 </div>
               )}
             </div>
           </div>
 
+          {/* Challenge */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <label
+              className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               <Calendar size={14} /> Challenge (optionnel)
             </label>
             <select
@@ -294,26 +339,35 @@ export default function AddDeal() {
               <option value="">Aucun challenge associé</option>
               {challenges.map((ch) => (
                 <option key={ch.id} value={ch.id}>
-                  {ch.label ? `${ch.label} (n°${ch.numero})` : `Challenge #${ch.numero}`}
+                  {ch.label
+                    ? `${ch.label} (n°${ch.numero})`
+                    : `Challenge #${ch.numero}`}
                   {ch.statut ? ` – ${ch.statut}` : ""}
                 </option>
               ))}
             </select>
             {selectedChallenge && (
-              <div className="mt-1 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <div
+                className="mt-1 text-xs"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 Challenge #{selectedChallenge.numero} –{" "}
                 {selectedChallenge.statut === "TERMINE"
                   ? "Terminé"
                   : selectedChallenge.statut === "EN_COURS"
-                  ? "En cours"
-                  : "À venir"}
+                    ? "En cours"
+                    : "À venir"}
               </div>
             )}
           </div>
 
+          {/* Dates R1 / R2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <label
+                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 <Calendar size={14} /> Date du R1 *
               </label>
               <input
@@ -326,7 +380,10 @@ export default function AddDeal() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <label
+                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 <Calendar size={14} /> Date du R2
               </label>
               <input
@@ -339,50 +396,66 @@ export default function AddDeal() {
             </div>
           </div>
 
+          {/* Close effectué en (auto) */}
           <div>
-            <label className="text-sm font-medium mb-2 block" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <label
+              className="text-sm font-medium mb-2 block"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               Close effectué en
             </label>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setCloseEn("R1")}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  closeEn === "R1"
+              <div
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium text-center ${
+                  closeEnAuto === "R1"
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-secondary text-muted-foreground border border-border hover:bg-secondary/80"
+                    : "bg-secondary text-muted-foreground border border-border"
                 }`}
                 style={
-                  closeEn === "R1"
-                    ? { background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }
-                    : { backgroundColor: "hsl(var(--secondary))", border: "1px solid hsl(var(--border))" }
+                  closeEnAuto === "R1"
+                    ? {
+                        background: "var(--gradient-primary)",
+                        color: "hsl(var(--primary-foreground))",
+                      }
+                    : {
+                        backgroundColor: "hsl(var(--secondary))",
+                        border: "1px solid hsl(var(--border))",
+                      }
                 }
               >
                 R1 (premier appel)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCloseEn("R2")}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  closeEn === "R2"
+              </div>
+              <div
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium text-center ${
+                  closeEnAuto === "R2"
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-secondary text-muted-foreground border border-border hover:bg-secondary/80"
+                    : "bg-secondary text-muted-foreground border border-border"
                 }`}
                 style={
-                  closeEn === "R2"
-                    ? { background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }
-                    : { backgroundColor: "hsl(var(--secondary))", border: "1px solid hsl(var(--border))" }
+                  closeEnAuto === "R2"
+                    ? {
+                        background: "var(--gradient-primary)",
+                        color: "hsl(var(--primary-foreground))",
+                      }
+                    : {
+                        backgroundColor: "hsl(var(--secondary))",
+                        border: "1px solid hsl(var(--border))",
+                      }
                 }
               >
                 R2 (second appel)
-              </button>
+              </div>
             </div>
           </div>
 
+          {/* Type de vente et mensualités (si applicable) */}
           {showTypeVente && (
             <>
               <div>
-                <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <label
+                  className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
                   <CreditCard size={14} /> Type de vente *
                 </label>
                 <select
@@ -392,15 +465,21 @@ export default function AddDeal() {
                   style={inputStyle}
                 >
                   <option value="FULL_PAY">Full Pay (paiement unique)</option>
-                  <option value="SPLIT_PAY">Split Pay (paiement fractionné)</option>
+                  <option value="SPLIT_PAY">
+                    Split Pay (paiement fractionné)
+                  </option>
                 </select>
               </div>
               {typeVente === "SPLIT_PAY" && (
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block">Nombre de mensualités *</label>
+                  <label className="text-sm font-medium mb-1.5 block">
+                    Nombre de mensualités *
+                  </label>
                   <select
                     value={nbMensualites}
-                    onChange={(e) => setNbMensualites(e.target.value as NbMensualites)}
+                    onChange={(e) =>
+                      setNbMensualites(e.target.value as NbMensualites)
+                    }
                     className={inputClass}
                     style={inputStyle}
                     required
@@ -418,9 +497,14 @@ export default function AddDeal() {
             </>
           )}
 
+          {/* Montant contracté et montant collecté avec slider */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Montant contracté */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <label
+                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
                 <DollarSign size={14} /> Montant contracté (€) *
               </label>
               <input
@@ -434,24 +518,85 @@ export default function AddDeal() {
                 required={!isR2Mode}
               />
             </div>
+
+            {/* Montant collecté avec slider et champ à droite */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-                <DollarSign size={14} /> Montant collecté (€)
-              </label>
-              <input
-                type="number"
-                value={montantCollecte}
-                onChange={(e) => setMontantCollecte(e.target.value)}
-                placeholder="0"
-                className={inputClass}
-                style={isR2Mode ? disabledInputStyle : inputStyle}
-                disabled={isR2Mode}
-              />
+              <div className="flex justify-between items-start">
+                <div>
+                  <label
+                    className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                  >
+                    <DollarSign size={14} /> Montant collecté (€)
+                  </label>
+                  <div style={{ color: "hsl(var(--primary))" }} className="text-xs text-muted-foreground pl-5">
+                    0€ → {maxSlider.toLocaleString("fr-FR")}€
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-28">
+                    <input
+                      type="number"
+                      value={montantCollecte}
+                      onChange={(e) => setMontantCollecte(e.target.value)}
+                      placeholder="0"
+                      className={inputClass}
+                      style={isR2Mode ? disabledInputStyle : inputStyle}
+                      disabled={isR2Mode}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                      €
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <input
+                  type="range"
+                  min="0"
+                  max={maxSlider}
+                  step="1"
+                  value={currentSliderValue}
+                  onChange={handleSliderChange}
+                  disabled={isR2Mode || maxSlider === 0}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none
+                    [&::-webkit-slider-thumb]:w-5
+                    [&::-webkit-slider-thumb]:h-5
+                    [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:cursor-pointer
+                    [&::-webkit-slider-thumb]:bg-[hsl(189,94%,43%)]
+                    [&::-webkit-slider-thumb]:shadow-[0_0_0_3px_hsl(189,94%,43%,0.25)]
+                    [&::-webkit-slider-thumb]:border-0
+                    [&::-moz-range-thumb]:w-5
+                    [&::-moz-range-thumb]:h-5
+                    [&::-moz-range-thumb]:rounded-full
+                    [&::-moz-range-thumb]:cursor-pointer
+                    [&::-moz-range-thumb]:bg-[hsl(189,94%,43%)]
+                    [&::-moz-range-thumb]:border-0"
+                  style={{
+                    background:
+                      maxSlider === 0
+                        ? "hsl(var(--secondary))"
+                        : `linear-gradient(
+                          to right,
+                          hsl(189, 94%, 43%) 0%,
+                          hsl(189, 94%, 43%) ${(currentSliderValue / maxSlider) * 100}%,
+                          hsl(215, 22%, 18%) ${(currentSliderValue / maxSlider) * 100}%,
+                          hsl(215, 22%, 18%) 100%
+                        )`,
+                  }}
+                />
+              </div>
             </div>
           </div>
 
+          {/* Délai de conversion */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <label
+              className="text-sm font-medium mb-1.5 block flex items-center gap-1"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               <Clock size={14} /> Délai de conversion (jours)
             </label>
             <input
@@ -475,7 +620,8 @@ export default function AddDeal() {
               }}
             >
               <AlertCircle size={16} />
-              Deal de grande valeur — pensez à valider les conditions commerciales.
+              Deal de grande valeur — pensez à valider les conditions
+              commerciales.
             </div>
           )}
 
