@@ -63,7 +63,6 @@ function getScoreC5(nbObjectifs: number, nbAtteints: number): number {
 }
 
 export async function computeMonthlyScore(userId: string, mois: string) {
-  console.log(`Calcul du MonthlyScore pour ${userId} - ${mois}`);
   
   // Récupérer tous les challenges du user
   const challenges = await prisma.challenge.findMany({

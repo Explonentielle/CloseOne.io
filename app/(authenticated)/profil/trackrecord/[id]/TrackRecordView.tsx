@@ -96,10 +96,6 @@ export default function TrackRecordView() {
     })
     .sort((a, b) => b.cash - a.cash);
 
-    console.log("allDeals:", allDeals);
-console.log("first deal:", allDeals[0]);
-console.log("deal.package:", allDeals[0]?.package);
-
   return (
     <div
       style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }}

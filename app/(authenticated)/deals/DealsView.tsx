@@ -43,7 +43,7 @@ function computeDealStatus(
   dateR2: Date | null
 ): DealStatus {
   // Finalisé : contrat signé et encaissement total
-  if (montantContracte > 0 && montantCollecte >= montantContracte) {
+  if (montantContracte > 0 && montantCollecte === montantContracte) {
     return "Finalisé";
   }
   // Non signé : pas de contrat ET pas de R2 planifié
@@ -126,7 +126,6 @@ export default function DealsView() {
           const packageName = deal.package?.nomPackage ?? "Deal";
           const dealName = `${packageName} - ${challenge.label ?? `Challenge #${challenge.numero}`}`;
 
-          console.log(deal)
           const status = computeDealStatus(
             deal.montantContracte,
             deal.montantCollecte,
@@ -215,7 +214,7 @@ export default function DealsView() {
           <h2 className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>
             Deals
           </h2>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <p className="text-sm mt-1 muted-foreground" style={{ color: "hsl(var(--muted-foreground))" }}>
             Gérez tous vos deals commerciaux
           </p>
         </div>

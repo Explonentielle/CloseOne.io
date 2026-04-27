@@ -14,7 +14,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Email invalide" }, { status: 400 });
   }
 
-  console.log("dfd")
   try {
     const updated = await prisma.user.update({
       where: { clerkId: userId },

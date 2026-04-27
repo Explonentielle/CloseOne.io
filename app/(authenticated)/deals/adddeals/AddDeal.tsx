@@ -62,19 +62,6 @@ export default function AddDeal() {
   const [dateR2, setDateR2] = useState("");
   const [delaiConversion, setDelaiConversion] = useState("");
 
-  const inputClass =
-    "w-full h-11 rounded-lg px-4 text-sm transition-all focus:outline-none focus:ring-2";
-  const inputStyle = {
-    border: "1px solid hsl(var(--border))",
-    backgroundColor: "hsl(var(--secondary))",
-    color: "hsl(var(--foreground))",
-  };
-  const disabledInputStyle = {
-    ...inputStyle,
-    opacity: 0.6,
-    cursor: "not-allowed",
-  };
-
   useEffect(() => {
     if (!user) return;
     const infosMap = new Map<string, InfopreneurOption>();
@@ -208,50 +195,30 @@ export default function AddDeal() {
       <div className="relative flex items-center justify-center mb-4">
         <button
           onClick={() => router.push("/deals")}
-          className="absolute left-0 inline-flex items-center gap-2 text-sm transition-colors hover:opacity-80"
-          style={{ color: "hsl(var(--muted-foreground))" }}
+          className="absolute left-0 inline-flex items-center gap-2 text-sm transition-colors hover:opacity-80 text-muted-foreground"
         >
           <ArrowLeft size={16} /> Retour
         </button>
         <div className="text-center">
-          <h2
-            className="text-2xl font-bold"
-            style={{ color: "hsl(var(--foreground))" }}
-          >
-            Nouveau deal
-          </h2>
-          <p
-            className="text-sm mt-0.5"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
+          <h2 className="text-2xl font-bold text-foreground">Nouveau deal</h2>
+          <p className="text-sm mt-0.5 text-muted-foreground">
             Renseignez les informations de la vente
           </p>
         </div>
       </div>
 
-      <div
-        className="p-6 space-y-6"
-        style={{
-          backgroundColor: "hsl(var(--card))",
-          border: "1px solid hsl(var(--border) / 0.5)",
-          borderRadius: "var(--radius-lg)",
-        }}
-      >
+      <div className="p-6 space-y-6 bg-card border border-border/50 rounded-lg">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Client + Package */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label
-                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <Users size={14} /> Client *
               </label>
               <select
                 value={selectedInfopreneurId}
                 onChange={(e) => setSelectedInfopreneurId(e.target.value)}
-                className={inputClass}
-                style={inputStyle}
+                className="input-base"
                 required
               >
                 <option value="">Sélectionnez un client</option>
@@ -261,43 +228,26 @@ export default function AddDeal() {
                   </option>
                 ))}
               </select>
-              {selectedInfopreneur && (
-                <div
-                  className="mt-1 text-xs flex items-center gap-1"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  {selectedInfopreneur.actif ? (
-                    <>
-                      <CheckCircle
-                        size={12}
-                        style={{ color: "hsl(var(--primary))" }}
-                      />{" "}
-                      Client actif
-                    </>
-                  ) : (
-                    <>
-                      <HelpCircle
-                        size={12}
-                        style={{ color: "hsl(var(--warning))" }}
-                      />{" "}
-                      Client inactif
-                    </>
-                  )}
+              {selectedInfopreneur?.actif ? (
+                <div className="mt-1 text-xs flex items-center gap-1">
+                  <CheckCircle size={12} className="text-primary" />
+                  <span className="text-primary">Client actif</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-xs flex items-center gap-1">
+                  <HelpCircle size={12} className="text-warning" />
+                  <span className="text-warning">Client inactif</span>
                 </div>
               )}
             </div>
             <div>
-              <label
-                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <Tag size={14} /> Package *
               </label>
               <select
                 value={selectedPackageId}
                 onChange={(e) => setSelectedPackageId(e.target.value)}
-                className={inputClass}
-                style={inputStyle}
+                className="input-base"
                 required
                 disabled={!selectedInfopreneurId}
               >
@@ -309,10 +259,7 @@ export default function AddDeal() {
                 ))}
               </select>
               {selectedPackage && (
-                <div
-                  className="mt-1 text-xs"
-                  style={{ color: "hsl(var(--primary))" }}
-                >
+                <div className="mt-1 text-xs text-primary">
                   {selectedPackage.financementDisponible
                     ? "✓ Financement possible"
                     : "✓ Uniquement Full Pay"}
@@ -323,17 +270,13 @@ export default function AddDeal() {
 
           {/* Challenge */}
           <div>
-            <label
-              className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
+            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
               <Calendar size={14} /> Challenge (optionnel)
             </label>
             <select
               value={selectedChallengeId}
               onChange={(e) => setSelectedChallengeId(e.target.value)}
-              className={inputClass}
-              style={inputStyle}
+              className="input-base"
               disabled={!selectedInfopreneurId}
             >
               <option value="">Aucun challenge associé</option>
@@ -342,15 +285,11 @@ export default function AddDeal() {
                   {ch.label
                     ? `${ch.label} (n°${ch.numero})`
                     : `Challenge #${ch.numero}`}
-                  {ch.statut ? ` – ${ch.statut}` : ""}
                 </option>
               ))}
             </select>
             {selectedChallenge && (
-              <div
-                className="mt-1 text-xs"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <div className="mt-1 text-xs text-muted-foreground text-primary">
                 Challenge #{selectedChallenge.numero} –{" "}
                 {selectedChallenge.statut === "TERMINE"
                   ? "Terminé"
@@ -364,84 +303,51 @@ export default function AddDeal() {
           {/* Dates R1 / R2 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label
-                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <Calendar size={14} /> Date du R1 *
               </label>
               <input
                 type="date"
                 value={dateR1}
                 onChange={(e) => setDateR1(e.target.value)}
-                className={inputClass}
-                style={inputStyle}
+                className="input-base"
                 required={!dateR2}
               />
             </div>
             <div>
-              <label
-                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <Calendar size={14} /> Date du R2
               </label>
               <input
                 type="date"
                 value={dateR2}
                 onChange={(e) => setDateR2(e.target.value)}
-                className={inputClass}
-                style={inputStyle}
+                className="input-base"
               />
             </div>
           </div>
 
           {/* Close effectué en (auto) */}
           <div>
-            <label
-              className="text-sm font-medium mb-2 block"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">
               Close effectué en
             </label>
             <div className="flex gap-3">
               <div
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium text-center ${
                   closeEnAuto === "R1"
-                    ? "bg-primary text-primary-foreground shadow-sm"
+                    ? "bg-gradient-primary text-primary-foreground shadow-sm"
                     : "bg-secondary text-muted-foreground border border-border"
                 }`}
-                style={
-                  closeEnAuto === "R1"
-                    ? {
-                        background: "var(--gradient-primary)",
-                        color: "hsl(var(--primary-foreground))",
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--secondary))",
-                        border: "1px solid hsl(var(--border))",
-                      }
-                }
               >
                 R1 (premier appel)
               </div>
               <div
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium text-center ${
                   closeEnAuto === "R2"
-                    ? "bg-primary text-primary-foreground shadow-sm"
+                    ? "bg-gradient-primary text-primary-foreground shadow-sm"
                     : "bg-secondary text-muted-foreground border border-border"
                 }`}
-                style={
-                  closeEnAuto === "R2"
-                    ? {
-                        background: "var(--gradient-primary)",
-                        color: "hsl(var(--primary-foreground))",
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--secondary))",
-                        border: "1px solid hsl(var(--border))",
-                      }
-                }
               >
                 R2 (second appel)
               </div>
@@ -452,17 +358,13 @@ export default function AddDeal() {
           {showTypeVente && (
             <>
               <div>
-                <label
-                  className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
+                <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                   <CreditCard size={14} /> Type de vente *
                 </label>
                 <select
                   value={typeVente}
                   onChange={(e) => setTypeVente(e.target.value as SaleType)}
-                  className={inputClass}
-                  style={inputStyle}
+                  className="input-base"
                 >
                   <option value="FULL_PAY">Full Pay (paiement unique)</option>
                   <option value="SPLIT_PAY">
@@ -480,8 +382,7 @@ export default function AddDeal() {
                     onChange={(e) =>
                       setNbMensualites(e.target.value as NbMensualites)
                     }
-                    className={inputClass}
-                    style={inputStyle}
+                    className="input-base"
                     required
                   >
                     <option value="">Sélectionnez</option>
@@ -497,14 +398,11 @@ export default function AddDeal() {
             </>
           )}
 
-          {/* Montant contracté et montant collecté avec slider */}
+          {/* Montants */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Montant contracté */}
             <div>
-              <label
-                className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <DollarSign size={14} /> Montant contracté (€) *
               </label>
               <input
@@ -512,24 +410,20 @@ export default function AddDeal() {
                 value={montantContracte}
                 onChange={(e) => setMontantContracte(e.target.value)}
                 placeholder="0"
-                className={inputClass}
-                style={isR2Mode ? disabledInputStyle : inputStyle}
+                className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
                 disabled={isR2Mode}
                 required={!isR2Mode}
               />
             </div>
 
-            {/* Montant collecté avec slider et champ à droite */}
+            {/* Montant collecté avec slider */}
             <div>
               <div className="flex justify-between items-start">
                 <div>
-                  <label
-                    className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
+                  <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                     <DollarSign size={14} /> Montant collecté (€)
                   </label>
-                  <div style={{ color: "hsl(var(--primary))" }} className="text-xs text-muted-foreground pl-5">
+                  <div className="text-xs text-muted-foreground pl-5 text-primary">
                     0€ → {maxSlider.toLocaleString("fr-FR")}€
                   </div>
                 </div>
@@ -540,8 +434,7 @@ export default function AddDeal() {
                       value={montantCollecte}
                       onChange={(e) => setMontantCollecte(e.target.value)}
                       placeholder="0"
-                      className={inputClass}
-                      style={isR2Mode ? disabledInputStyle : inputStyle}
+                      className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
                       disabled={isR2Mode}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
@@ -565,14 +458,14 @@ export default function AddDeal() {
                     [&::-webkit-slider-thumb]:h-5
                     [&::-webkit-slider-thumb]:rounded-full
                     [&::-webkit-slider-thumb]:cursor-pointer
-                    [&::-webkit-slider-thumb]:bg-[hsl(189,94%,43%)]
-                    [&::-webkit-slider-thumb]:shadow-[0_0_0_3px_hsl(189,94%,43%,0.25)]
+                    [&::-webkit-slider-thumb]:bg-[hsl(var(--primary))]
+                    [&::-webkit-slider-thumb]:shadow-[0_0_0_3px_hsl(var(--primary)/0.25)]
                     [&::-webkit-slider-thumb]:border-0
                     [&::-moz-range-thumb]:w-5
                     [&::-moz-range-thumb]:h-5
                     [&::-moz-range-thumb]:rounded-full
                     [&::-moz-range-thumb]:cursor-pointer
-                    [&::-moz-range-thumb]:bg-[hsl(189,94%,43%)]
+                    [&::-moz-range-thumb]:bg-[hsl(var(--primary))]
                     [&::-moz-range-thumb]:border-0"
                   style={{
                     background:
@@ -580,10 +473,10 @@ export default function AddDeal() {
                         ? "hsl(var(--secondary))"
                         : `linear-gradient(
                           to right,
-                          hsl(189, 94%, 43%) 0%,
-                          hsl(189, 94%, 43%) ${(currentSliderValue / maxSlider) * 100}%,
-                          hsl(215, 22%, 18%) ${(currentSliderValue / maxSlider) * 100}%,
-                          hsl(215, 22%, 18%) 100%
+                          hsl(var(--primary)) 0%,
+                          hsl(var(--primary)) ${(currentSliderValue / maxSlider) * 100}%,
+                          hsl(var(--secondary)) ${(currentSliderValue / maxSlider) * 100}%,
+                          hsl(var(--secondary)) 100%
                         )`,
                   }}
                 />
@@ -593,10 +486,7 @@ export default function AddDeal() {
 
           {/* Délai de conversion */}
           <div>
-            <label
-              className="text-sm font-medium mb-1.5 block flex items-center gap-1"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            >
+            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
               <Clock size={14} /> Délai de conversion (jours)
             </label>
             <input
@@ -604,21 +494,13 @@ export default function AddDeal() {
               value={delaiConversion}
               onChange={(e) => setDelaiConversion(e.target.value)}
               placeholder="0"
-              className={inputClass}
-              style={isR2Mode ? disabledInputStyle : inputStyle}
+              className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
               disabled={isR2Mode}
             />
           </div>
 
           {isR1Mode && parseFloat(montantContracte) > 50000 && (
-            <div
-              className="flex items-center gap-2 p-3 rounded-md text-sm"
-              style={{
-                backgroundColor: "hsl(var(--warning) / 0.15)",
-                color: "hsl(var(--warning))",
-                border: "1px solid hsl(var(--warning) / 0.3)",
-              }}
-            >
+            <div className="flex items-center gap-2 p-3 rounded-md text-sm bg-warning/15 text-warning border border-warning/30">
               <AlertCircle size={16} />
               Deal de grande valeur — pensez à valider les conditions
               commerciales.
@@ -627,11 +509,7 @@ export default function AddDeal() {
 
           <button
             type="submit"
-            className="w-full h-12 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity mt-4"
-            style={{
-              background: "var(--gradient-primary)",
-              color: "hsl(var(--primary-foreground))",
-            }}
+            className="btn-primary w-full h-12 text-sm mt-4 text-primary-foreground"
           >
             Créer le deal
           </button>

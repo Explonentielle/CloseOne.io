@@ -10,11 +10,11 @@ import {
   Briefcase,
   PlusCircle,
   X,
+  Loader2,
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getAllInfopreneurs, createInfopreneur, getNiches } from "@/app/actions/ClientsActions";
 import CreateInfopreneurModal from "@/components/client/CreateClientModal";
-
 
 interface Niche {
   id: string;
@@ -38,19 +38,17 @@ export default function ClientsView() {
   const [allInfos, setAllInfos] = useState<Infopreneur[]>([]);
   const [niches, setNiches] = useState<Niche[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [newInfopreneur, setNewInfopreneur] = useState({
-    name: "",
-    nicheId: "",
-    status: "Actif" as "Actif" | "Inactif",
-  });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllInfopreneurs().then((res) => {
-      if (res.success && res.data) setAllInfos(res.data);
-    });
-    getNiches().then((res) => {
-      if (res.success && res.data) setNiches(res.data);
+    Promise.all([
+      getAllInfopreneurs(),
+      getNiches(),
+    ]).then(([infosRes, nichesRes]) => {
+      if (infosRes.success && infosRes.data) setAllInfos(infosRes.data);
+      if (nichesRes.success && nichesRes.data) setNiches(nichesRes.data);
+      setLoading(false);
     });
   }, []);
 
@@ -116,38 +114,44 @@ export default function ClientsView() {
     }
   };
 
-  if (!user) return <div className="py-20 text-center">Chargement...</div>;
-
-  // Helper pour obtenir le badge selon le type d'infopreneur
   const getTypeBadge = (inf: Infopreneur) => {
     if (!inf.isCustom) {
       return (
-        <span className="text-[11px] font-medium bg-blue-500/15 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+        <span className="text-[11px] font-medium bg-green-500/15 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full border border-green-500/30">
           Vérifié
         </span>
       );
     }
-    if (inf.createdByUserId === user.id) {
+    if (inf.createdByUserId === user?.id) {
       return (
-        <span className="text-[11px] font-medium bg-purple-500/15 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+        <span className="text-[11px] font-medium bg-warning/15 text-warning border border-warning/30 px-2 py-0.5 rounded-full">
           Personnalisé (moi)
         </span>
       );
     }
     return (
-      <span className="text-[11px] font-medium bg-orange-500/15 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full border border-orange-500/30">
+      <span className="text-[11px] font-medium bg-warning/15 text-warning border border-warning/30 px-2 py-0.5 rounded-full">
         Personnalisé (autre)
       </span>
     );
   };
 
+  // Attendre que l'utilisateur soit chargé, mais pas les infos distantes
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* En-tête avec titre et barre de recherche */}
+      {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold blue">Mes Clients</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="text-2xl font-bold text-foreground">Mes Clients</h2>
+          <p className="text-sm muted-foreground">
             Gérez vos relations clients
           </p>
         </div>
@@ -168,15 +172,15 @@ export default function ClientsView() {
       {/* Section 1 : Mes collaborations */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={18} className="text-primary blue" />
-          <h3 className="text-lg font-semibold blue">
+          <Briefcase size={18} className="text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">
             Mes collaborations
             <span className="ml-2 text-xs text-muted-foreground font-normal">
               ({filteredMyClients.length})
             </span>
           </h3>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm muted-foreground mb-4">
           Clients avec lesquels vous avez déjà collaboré (challenges ou VSL).
         </p>
 
@@ -205,10 +209,10 @@ export default function ClientsView() {
                   <div className="flex gap-2">
                     {getTypeBadge(client)}
                     <span
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
                         client.status === "Actif"
-                          ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
-                          : "bg-gray-500/15 text-gray-700 dark:text-gray-300 border border-gray-500/30"
+                          ? "bg-primary/15 text-primary border-primary/30"
+                          : "bg-muted text-muted-foreground border-border"
                       }`}
                     >
                       {client.status}
@@ -234,33 +238,37 @@ export default function ClientsView() {
         )}
       </div>
 
-      {/* Section 2 : Infopreneurs disponibles */}
+      {/* Section 2 : Infopreneurs disponibles - avec loader pendant le chargement */}
       <div>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <UserPlus size={18} className="text-muted-foreground" />
-            <h3 className="text-lg font-semibold blue">
+            <h3 className="text-lg font-semibold text-foreground">
               Clients disponibles
               <span className="ml-2 text-xs text-muted-foreground font-normal">
-                ({filteredAvailable.length})
+                ({loading ? "..." : filteredAvailable.length})
               </span>
             </h3>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1 text-xs bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/30 transition blue"
+            className="inline-flex items-center gap-1 text-xs bg-primary/20 border border-border rounded-lg px-2 py-1 whitespace-nowrap hover:bg-primary/30 transition text-primary"
           >
             <PlusCircle size={14} />
             Créer un client personnalisé
           </button>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm muted-foreground mb-4">
           Vous n'avez encore jamais travaillé avec ces infopreneurs. Cliquez sur{" "}
-          <strong>Ajouter</strong> pour créer un premier challenge.
+          <strong>Ajouter</strong> pour collaborer.
         </p>
 
-        {filteredAvailable.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredAvailable.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-lg">
             Tous les infopreneurs disponibles sont déjà dans votre liste.
           </div>
@@ -287,10 +295,10 @@ export default function ClientsView() {
                   <div className="flex gap-2">
                     {getTypeBadge(client)}
                     <span
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
                         client.status === "Actif"
-                          ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
-                          : "bg-gray-500/15 text-gray-700 dark:text-gray-300 border border-gray-500/30"
+                          ? "bg-primary/15 text-primary border-primary/30"
+                          : "bg-muted text-muted-foreground border-border"
                       }`}
                     >
                       {client.status}
@@ -309,7 +317,7 @@ export default function ClientsView() {
                   </Link>
                   <Link
                     href={`/clients/${client.id}/challenges/new`}
-                    className="flex-1 flex items-center justify-center border border-border gap-1 h-9 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-sm shadow-primary/30"
+                    className="flex-1 flex items-center justify-center gap-1 h-9 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition shadow-sm"
                   >
                     <PlusCircle size={14} /> Ajouter
                   </Link>

@@ -152,7 +152,7 @@ export default function ProfilView() {
         {/* ── RIGHT COLUMN ──*/}
         <div className="space-y-6">
           <div className="p-6" style={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border) / 0.5)', borderRadius: 'var(--radius-lg)' }}>
-            <h3 className="font-semibold text-[22px] mb-2" style={{ color: 'hsl(var(--foreground))' }}>Close Score — Détail</h3>
+            <h3 className="font-semibold text-[22px] mb-2" style={{ color: 'hsl(var(--foreground))' }}>Close Score</h3>
             <p className="text-[11px] mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>Score calculé sur 5 critères vérifiés par CloseOne</p>
             <CloseScoreRadar scores={lastScore ?? null} />
           </div>
