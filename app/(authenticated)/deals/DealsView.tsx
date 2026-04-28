@@ -33,6 +33,8 @@ interface Deal {
   delaiConversion: number | null;
   typeVente: string | null;
   nbMensualites: string | null;
+  dateR1: Date | null;
+  dateR2: Date | null;
 }
 
 // Correction : utiliser dateR2 au lieu de dateClose
@@ -105,6 +107,15 @@ function StatusBadge({ status }: { status: DealStatus }) {
   );
 }
 
+function formatDate(date: Date | null): string {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export default function DealsView() {
   const user = useUser();
   const [search, setSearch] = useState("");
@@ -130,7 +141,7 @@ export default function DealsView() {
             deal.montantContracte,
             deal.montantCollecte,
             deal.typeVente,
-            deal.dateR2 
+            deal.dateR2
           );
 
           const commission = deal.montantContracte * 0.1; // 10%
@@ -146,6 +157,8 @@ export default function DealsView() {
             delaiConversion: deal.delaiConversion,
             typeVente: deal.typeVente,
             nbMensualites: deal.nbMensualites,
+            dateR1: deal.dateR1 ?? null,
+            dateR2: deal.dateR2 ?? null,
           });
         }
       }
@@ -167,6 +180,8 @@ export default function DealsView() {
       delaiConversion: null,
       typeVente: "FULL_PAY",
       nbMensualites: null,
+      dateR1: null,
+      dateR2: null,
     };
   }, [userDeals]);
 
@@ -333,8 +348,10 @@ export default function DealsView() {
                 <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Délai (j)</th>
                 <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Type</th>
                 <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Mensualités</th>
+                <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Date R1</th>
+                <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Date R2</th>
                 <th className="text-left px-5 py-3 text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>Statut</th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
               {displayedDeals.map((d) => (
@@ -367,6 +384,12 @@ export default function DealsView() {
                   <td className="px-5 py-3.5" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {d.nbMensualites ? d.nbMensualites.replace("X", "") + " fois" : "—"}
                   </td>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {formatDate(d.dateR1)}
+                  </td>
+                  <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: d.dateR2 ? "hsl(var(--info))" : "hsl(var(--muted-foreground))" }}>
+                    {formatDate(d.dateR2)}
+                  </td>
                   <td className="px-5 py-3.5">
                     {d.id === "fake-deal" ? (
                       <span className="text-xs text-primary/70 italic">À créer</span>
@@ -378,7 +401,7 @@ export default function DealsView() {
               ))}
               {displayedDeals.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-12" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <td colSpan={11} className="text-center py-12" style={{ color: "hsl(var(--muted-foreground))" }}>
                     Aucun deal trouvé
                   </td>
                 </tr>
