@@ -39,43 +39,43 @@ function useDayMetrics(user: UserType | null): Metric[] {
 
     let r1Effectue = 0;
     let r2Effectue = 0;
-    let nbCloses = 0;
+    let signedDealsToday = 0;
+    let totalDealsToday = 0;
     let cashToday = 0;
 
-    // Parcourir les dailyEntries
-    for (const ch of user.challenges) {
-      for (const entry of ch.dailyEntries) {
-        if (toDateKey(entry.date) === todayKey) {
-          r1Effectue += entry.r1Effectue;
-          r2Effectue += entry.r2Effectue;
-          nbCloses += entry.nbCloses;
-        }
-      }
-    }
-
-    // Parcourir les deals pour compléter (si dailyEntries insuffisantes)
     for (const ch of user.challenges) {
       for (const deal of ch.deals) {
-        if (deal.dateR1 && toDateKey(deal.dateR1) === todayKey) {
-          r1Effectue += 1;
-        }
-        if (deal.dateR2 && toDateKey(deal.dateR2) === todayKey) {
-          r2Effectue += 1;
-          nbCloses += 1;
-          cashToday += deal.montantCollecte;
-        } else if (deal.createdAt && toDateKey(deal.createdAt) === todayKey && deal.montantCollecte > 0) {
-          // Si le deal a été créé aujourd'hui et a du collecté, on le compte aussi
+        const createdAtKey = deal.createdAt ? toDateKey(deal.createdAt) : null;
+        const dateR1Key = deal.dateR1 ? toDateKey(deal.dateR1) : null;
+        const dateR2Key = deal.dateR2 ? toDateKey(deal.dateR2) : null;
+        const dateCloseKey = deal.dateClose ? toDateKey(deal.dateClose) : null;
+
+        // Compter les R1 effectués (aujourd'hui)
+        if (dateR1Key === todayKey) r1Effectue++;
+
+        // Compter les R2 effectués (aujourd'hui)
+        if (dateR2Key === todayKey) r2Effectue++;
+
+        // Total deals créés aujourd'hui (pour le taux)
+        if (createdAtKey === todayKey) totalDealsToday++;
+
+        // Deals signés (montantContracte > 0) créés aujourd'hui
+        if (createdAtKey === todayKey && deal.montantContracte > 0) signedDealsToday++;
+
+        // Cash collecté aujourd'hui : priorité à dateR2, puis dateClose, puis createdAt
+        let collectDateKey = dateR2Key ?? dateCloseKey ?? createdAtKey;
+        if (collectDateKey === todayKey && deal.montantCollecte > 0) {
           cashToday += deal.montantCollecte;
         }
       }
     }
 
-    const taux = r1Effectue > 0 ? Math.round((nbCloses / r1Effectue) * 100) : 0;
+    const taux = totalDealsToday ? (signedDealsToday / totalDealsToday) * 100 : 0;
 
     return [
       { label: "R1 effectués", value: String(r1Effectue) },
       { label: "R2 effectués", value: String(r2Effectue) },
-      { label: "Closes", value: String(nbCloses) },
+      { label: "Closes", value: String(signedDealsToday) },
       { label: "Cash du jour", value: fmtEur(cashToday) },
       { label: "Taux conversion", value: fmtPct(taux) },
     ];
@@ -83,28 +83,24 @@ function useDayMetrics(user: UserType | null): Metric[] {
 }
 
 // ─── Métriques "Challenge" ──────────────────────────────────────────────────
+// Agrège tous les challenges
 function useChallengeMetrics(user: UserType | null): Metric[] {
   return useMemo(() => {
     if (!user) return [];
 
-    // On prend tous les challenges (pas seulement le premier)
+    let totalDeals = 0;
+    let signedDeals = 0;
     let totalContracte = 0;
     let totalCollecte = 0;
-    let totalR1 = 0;
-    let totalCloses = 0;
     let delais: number[] = [];
     let fullPayCount = 0;
-    let totalDeals = 0;
 
     for (const ch of user.challenges) {
       const deals = ch.deals;
+      totalDeals += deals.length;
+      signedDeals += deals.filter(d => d.montantContracte > 0).length;
       totalContracte += deals.reduce((s, d) => s + d.montantContracte, 0);
       totalCollecte += deals.reduce((s, d) => s + d.montantCollecte, 0);
-      totalR1 += ch.dailyEntries.reduce((s, e) => s + e.r1Effectue, 0);
-      // Pour les closes, on compte les deals avec montantContracte > 0 (signés)
-      totalCloses += deals.filter(d => d.montantContracte > 0).length;
-      totalDeals += deals.length;
-
       deals.forEach(d => {
         if (d.delaiConversion && d.delaiConversion > 0) delais.push(d.delaiConversion);
         if (d.typeVente === "FULL_PAY") fullPayCount++;
@@ -113,7 +109,7 @@ function useChallengeMetrics(user: UserType | null): Metric[] {
 
     const delaiMoyen = delais.length ? delais.reduce((a, b) => a + b, 0) / delais.length : 0;
     const fullPayPct = totalDeals ? (fullPayCount / totalDeals) * 100 : 0;
-    const tauxConversion = totalR1 > 0 ? (totalCloses / totalR1) * 100 : 0;
+    const tauxConversion = totalDeals ? (signedDeals / totalDeals) * 100 : 0;
 
     return [
       { label: "Taux conversion", value: fmtPct(tauxConversion) },
@@ -144,13 +140,13 @@ function useInfopreneurMetrics(user: UserType | null): Metric[] {
     const top = Object.values(byInf).sort((a, b) => b.deals.length - a.deals.length)[0];
     if (!top) return [{ label: "Aucune donnée", value: "—" }];
 
+    const totalDeals = top.deals.length;
+    const signedDeals = top.deals.filter(d => d.montantContracte > 0).length;
+    const tauxConversion = totalDeals ? (signedDeals / totalDeals) * 100 : 0;
+
     const totalContracte = top.deals.reduce((s, d) => s + d.montantContracte, 0);
     const totalCollecte = top.deals.reduce((s, d) => s + d.montantCollecte, 0);
     const collectePct = totalContracte ? (totalCollecte / totalContracte) * 100 : 0;
-
-    const totalR1 = top.entries.reduce((s, e) => s + e.r1Effectue, 0);
-    const totalCloses = top.deals.filter(d => d.montantContracte > 0).length;
-    const tauxConversion = totalR1 > 0 ? (totalCloses / totalR1) * 100 : 0;
 
     const fullPay = top.deals.filter(d => d.typeVente === "FULL_PAY").length;
     const splitPay = top.deals.filter(d => d.typeVente === "SPLIT_PAY").length;
@@ -174,27 +170,28 @@ function useNicheMetrics(user: UserType | null): Metric[] {
   return useMemo(() => {
     if (!user) return [];
 
-    const byNiche: Record<string, { name: string; cash: number; r1: number; closes: number }> = {};
+    const byNiche: Record<string, { name: string; cash: number; totalDeals: number; signedDeals: number }> = {};
 
     for (const ch of user.challenges) {
       const nicheName = ch.infopreneur.niche.nom;
       if (!byNiche[nicheName]) {
-        byNiche[nicheName] = { name: nicheName, cash: 0, r1: 0, closes: 0 };
+        byNiche[nicheName] = { name: nicheName, cash: 0, totalDeals: 0, signedDeals: 0 };
       }
       byNiche[nicheName].cash += ch.deals.reduce((s, d) => s + d.montantContracte, 0);
-      byNiche[nicheName].r1 += ch.dailyEntries.reduce((s, e) => s + e.r1Effectue, 0);
-      byNiche[nicheName].closes += ch.deals.filter(d => d.montantContracte > 0).length;
+      byNiche[nicheName].totalDeals += ch.deals.length;
+      byNiche[nicheName].signedDeals += ch.deals.filter(d => d.montantContracte > 0).length;
     }
 
     const entries = Object.values(byNiche).sort((a, b) => b.cash - a.cash);
     if (entries.length === 0) return [{ label: "Aucune niche", value: "—" }];
 
-    const totalR1 = entries.reduce((s, n) => s + n.r1, 0);
-    const totalCloses = entries.reduce((s, n) => s + n.closes, 0);
-    const tauxMoyen = totalR1 > 0 ? (totalCloses / totalR1) * 100 : 0;
-
     const top3 = entries.slice(0, 3);
     const metrics: Metric[] = top3.map((n) => ({ label: n.name, value: fmtEur(n.cash) }));
+
+    // Taux conversion moyen pondéré (total signed / total deals toutes niches)
+    const totalDealsAll = entries.reduce((s, n) => s + n.totalDeals, 0);
+    const signedDealsAll = entries.reduce((s, n) => s + n.signedDeals, 0);
+    const tauxMoyen = totalDealsAll ? (signedDealsAll / totalDealsAll) * 100 : 0;
     metrics.push({ label: "Taux conversion moyen", value: fmtPct(tauxMoyen) });
     return metrics;
   }, [user]);
@@ -206,18 +203,16 @@ function useGlobalMetrics(user: UserType | null): Metric[] {
     if (!user) return [];
 
     const allDeals = user.challenges.flatMap((ch) => ch.deals);
-    const allEntries = user.challenges.flatMap((ch) => ch.dailyEntries);
+    const totalDeals = allDeals.length;
+    const signedDeals = allDeals.filter(d => d.montantContracte > 0).length;
+    const tauxConversion = totalDeals ? (signedDeals / totalDeals) * 100 : 0;
 
     const totalContracte = allDeals.reduce((s, d) => s + d.montantContracte, 0);
     const totalCollecte = allDeals.reduce((s, d) => s + d.montantCollecte, 0);
-    const collectePct = totalContracte > 0 ? (totalCollecte / totalContracte) * 100 : 0;
+    const collectePct = totalContracte ? (totalCollecte / totalContracte) * 100 : 0;
 
-    const totalR1 = allEntries.reduce((s, e) => s + e.r1Effectue, 0);
-    const totalCloses = allDeals.filter(d => d.montantContracte > 0).length;
-    const tauxConversion = totalR1 > 0 ? (totalCloses / totalR1) * 100 : 0;
-
-    const fullPayCount = allDeals.filter((d) => d.typeVente === "FULL_PAY").length;
-    const fullPayPct = allDeals.length > 0 ? (fullPayCount / allDeals.length) * 100 : 0;
+    const fullPayCount = allDeals.filter(d => d.typeVente === "FULL_PAY").length;
+    const fullPayPct = totalDeals ? (fullPayCount / totalDeals) * 100 : 0;
 
     const scores = user.monthlyScores ?? [];
     const closeScore =
@@ -246,7 +241,6 @@ function useCashChartData(user: UserType | null) {
     for (const ch of user.challenges) {
       for (const deal of ch.deals) {
         if (deal.montantCollecte <= 0) continue;
-        // Priorité: dateClose, dateR2, createdAt
         let date = deal.dateClose ?? deal.dateR2 ?? deal.createdAt;
         if (!date) continue;
         const key = toDateKey(date);
@@ -269,7 +263,7 @@ function useCashChartData(user: UserType | null) {
   }, [user]);
 }
 
-// ─── Calendrier mensuel (basé sur dateR1, dateR2 et dailyEntries) ──────────
+// ─── Calendrier mensuel (basé sur dateR1, dateR2 et createdAt) ─────────────
 function useCalendarData(user: UserType | null) {
   return useMemo(() => {
     const now = new Date();
@@ -282,7 +276,6 @@ function useCalendarData(user: UserType | null) {
     const entryByDay: Record<number, { r1: number; closes: number; cash: number }> = {};
 
     if (user) {
-      // Daily entries
       for (const ch of user.challenges) {
         for (const entry of ch.dailyEntries) {
           const d = new Date(entry.date);
@@ -293,10 +286,6 @@ function useCalendarData(user: UserType | null) {
             entryByDay[day].closes += entry.nbCloses;
           }
         }
-      }
-
-      // Deals : utilise dateR1 pour les R1, dateR2 pour les closes et le cash
-      for (const ch of user.challenges) {
         for (const deal of ch.deals) {
           if (deal.dateR1) {
             const d = new Date(deal.dateR1);
@@ -315,7 +304,6 @@ function useCalendarData(user: UserType | null) {
               entryByDay[day].cash += deal.montantCollecte;
             }
           } else if (deal.createdAt && deal.montantCollecte > 0) {
-            // Si pas de dateR2 mais le deal a été créé ce mois-ci, on peut l'associer à sa date de création
             const d = new Date(deal.createdAt);
             if (d.getFullYear() === year && d.getMonth() === month) {
               const day = d.getDate();
