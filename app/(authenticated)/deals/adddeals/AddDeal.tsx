@@ -13,6 +13,7 @@ import {
   Clock,
   CheckCircle,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { createDeal } from "@/app/actions/DealAction";
@@ -61,6 +62,8 @@ export default function AddDeal() {
   const [dateR1, setDateR1] = useState("");
   const [dateR2, setDateR2] = useState("");
   const [delaiConversion, setDelaiConversion] = useState("");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -111,34 +114,31 @@ export default function AddDeal() {
     fetchPackages();
   }, [selectedInfopreneurId, user]);
 
+  // Pré-remplir le montant contracté selon le package
   useEffect(() => {
     const pkg = packages.find((p) => p.id === selectedPackageId);
-    if (pkg && !dateR2) {
+    if (pkg) {
       setMontantContracte(pkg.valeur.toString());
       if (!pkg.financementDisponible && typeVente === "SPLIT_PAY") {
         setTypeVente("FULL_PAY");
         setNbMensualites("");
       }
     }
-  }, [selectedPackageId, packages, dateR2]);
+  }, [selectedPackageId, packages]);
 
+  // Synchronisation du montant collecté :
+  // - FULL_PAY : toujours égal au montant contracté
+  // - SPLIT_PAY : calcul de la première mensualité (montant / nbMensualites)
   useEffect(() => {
-    if (dateR2) {
-      setMontantContracte("0");
-      setMontantCollecte("0");
-    }
-  }, [dateR2]);
-
-  useEffect(() => {
-    if (dateR2) return;
-    if (typeVente === "FULL_PAY" && montantContracte) {
-      setMontantCollecte(montantContracte);
-    } else if (typeVente === "SPLIT_PAY" && !montantCollecte && montantContracte && dateR1) {
+    const contracte = parseFloat(montantContracte) || 0;
+    if (typeVente === "FULL_PAY") {
+      setMontantCollecte(contracte.toString());
+    } else if (typeVente === "SPLIT_PAY" && contracte) {
       const nb = nbMensualites ? parseInt(nbMensualites.slice(1)) : 2;
-      const premierMensualite = parseFloat(montantContracte) / nb;
-      setMontantCollecte(Math.floor(premierMensualite).toString());
+      const premiereMensualite = contracte / nb;
+      setMontantCollecte(Math.floor(premiereMensualite).toString());
     }
-  }, [typeVente, montantContracte, nbMensualites, dateR1, dateR2]);
+  }, [typeVente, montantContracte, nbMensualites]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,17 +152,21 @@ export default function AddDeal() {
       return;
     }
 
+    setIsSubmitting(true);
+
     const response = await createDeal({
       challengeId: selectedChallengeId || null,
       packageId: selectedPackageId,
       montantContracte: parseFloat(montantContracte) || 0,
       montantCollecte: parseFloat(montantCollecte) || 0,
-      typeVente: dateR2 ? undefined : typeVente,
-      nbMensualites: typeVente === "SPLIT_PAY" && !dateR2 ? (nbMensualites as NbMensualites) : null,
+      typeVente: typeVente,
+      nbMensualites: typeVente === "SPLIT_PAY" ? (nbMensualites as NbMensualites) : null,
       dateR1: dateR1 ? new Date(dateR1) : null,
       dateR2: dateR2 ? new Date(dateR2) : null,
       delaiConversion: delaiConversion ? parseInt(delaiConversion) : null,
     });
+
+    setIsSubmitting(false);
 
     if (response.success) {
       router.push("/deals");
@@ -174,21 +178,20 @@ export default function AddDeal() {
   const selectedInfopreneur = infopreneurs.find((i) => i.id === selectedInfopreneurId);
   const selectedPackage = packages.find((p) => p.id === selectedPackageId);
   const selectedChallenge = challenges.find((c) => c.id === selectedChallengeId);
-  const isR2Mode = !!dateR2;
   const isR1Mode = !!dateR1 && !dateR2;
-  const showTypeVente = !dateR2 && parseInt(montantContracte) > 0;
+  const showTypeVente = parseFloat(montantContracte) > 0;
 
   const closeEnAuto = dateR2 ? "R2" : dateR1 ? "R1" : "R1";
 
-  const maxSlider = parseInt(montantContracte) || 0;
-  const currentSliderValue = parseInt(montantCollecte) || 0;
+  const maxSlider = parseFloat(montantContracte) || 0;
+  const currentSliderValue = parseFloat(montantCollecte) || 0;
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
+    const value = parseFloat(e.target.value);
     setMontantCollecte(value.toString());
   };
 
-  if (!user) return <div className="py-20 text-center">Chargement...</div>;
+  if (!user) return <div className="py-20 text-center text-muted-foreground">Chargement...</div>;
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-6 animate-slide-up">
@@ -196,6 +199,7 @@ export default function AddDeal() {
         <button
           onClick={() => router.push("/deals")}
           className="absolute left-0 inline-flex items-center gap-2 text-sm transition-colors hover:opacity-80 text-muted-foreground"
+          disabled={isSubmitting}
         >
           <ArrowLeft size={16} /> Retour
         </button>
@@ -207,7 +211,11 @@ export default function AddDeal() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6 bg-card border border-border/50 rounded-lg">
+      <div
+        className={`p-6 space-y-6 bg-card border border-border/50 rounded-lg transition-opacity duration-200 ${
+          isSubmitting ? "opacity-60 pointer-events-none" : ""
+        }`}
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Client + Package */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -220,6 +228,7 @@ export default function AddDeal() {
                 onChange={(e) => setSelectedInfopreneurId(e.target.value)}
                 className="input-base"
                 required
+                disabled={isSubmitting}
               >
                 <option value="">Sélectionnez un client</option>
                 {infopreneurs.map((inf) => (
@@ -233,7 +242,7 @@ export default function AddDeal() {
                   <CheckCircle size={12} className="text-primary" />
                   <span className="text-primary">Client actif</span>
                 </div>
-              ) : (
+              ) : selectedInfopreneur && (
                 <div className="mt-1 text-xs flex items-center gap-1">
                   <HelpCircle size={12} className="text-warning" />
                   <span className="text-warning">Client inactif</span>
@@ -249,7 +258,7 @@ export default function AddDeal() {
                 onChange={(e) => setSelectedPackageId(e.target.value)}
                 className="input-base"
                 required
-                disabled={!selectedInfopreneurId}
+                disabled={isSubmitting || !selectedInfopreneurId}
               >
                 <option value="">Sélectionnez un package</option>
                 {packages.map((pkg) => (
@@ -277,7 +286,7 @@ export default function AddDeal() {
               value={selectedChallengeId}
               onChange={(e) => setSelectedChallengeId(e.target.value)}
               className="input-base"
-              disabled={!selectedInfopreneurId}
+              disabled={isSubmitting || !selectedInfopreneurId}
             >
               <option value="">Aucun challenge associé</option>
               {challenges.map((ch) => (
@@ -289,7 +298,7 @@ export default function AddDeal() {
               ))}
             </select>
             {selectedChallenge && (
-              <div className="mt-1 text-xs text-muted-foreground text-primary">
+              <div className="mt-1 text-xs text-primary">
                 Challenge #{selectedChallenge.numero} –{" "}
                 {selectedChallenge.statut === "TERMINE"
                   ? "Terminé"
@@ -312,6 +321,7 @@ export default function AddDeal() {
                 onChange={(e) => setDateR1(e.target.value)}
                 className="input-base"
                 required={!dateR2}
+                disabled={isSubmitting}
               />
             </div>
             <div>
@@ -323,6 +333,7 @@ export default function AddDeal() {
                 value={dateR2}
                 onChange={(e) => setDateR2(e.target.value)}
                 className="input-base"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -354,7 +365,7 @@ export default function AddDeal() {
             </div>
           </div>
 
-          {/* Type de vente et mensualités (si applicable) */}
+          {/* Type de vente et mensualités */}
           {showTypeVente && (
             <>
               <div>
@@ -365,11 +376,10 @@ export default function AddDeal() {
                   value={typeVente}
                   onChange={(e) => setTypeVente(e.target.value as SaleType)}
                   className="input-base"
+                  disabled={isSubmitting}
                 >
                   <option value="FULL_PAY">Full Pay (paiement unique)</option>
-                  <option value="SPLIT_PAY">
-                    Split Pay (paiement fractionné)
-                  </option>
+                  <option value="SPLIT_PAY">Split Pay (paiement fractionné)</option>
                 </select>
               </div>
               {typeVente === "SPLIT_PAY" && (
@@ -379,11 +389,10 @@ export default function AddDeal() {
                   </label>
                   <select
                     value={nbMensualites}
-                    onChange={(e) =>
-                      setNbMensualites(e.target.value as NbMensualites)
-                    }
+                    onChange={(e) => setNbMensualites(e.target.value as NbMensualites)}
                     className="input-base"
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">Sélectionnez</option>
                     <option value="X2">2 fois</option>
@@ -400,7 +409,6 @@ export default function AddDeal() {
 
           {/* Montants */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Montant contracté */}
             <div>
               <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
                 <DollarSign size={14} /> Montant contracté (€) *
@@ -410,13 +418,12 @@ export default function AddDeal() {
                 value={montantContracte}
                 onChange={(e) => setMontantContracte(e.target.value)}
                 placeholder="0"
-                className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
-                disabled={isR2Mode}
-                required={!isR2Mode}
+                className="input-base"
+                disabled={isSubmitting}
+                required
               />
             </div>
 
-            {/* Montant collecté avec slider */}
             <div>
               <div className="flex justify-between items-start">
                 <div>
@@ -434,8 +441,8 @@ export default function AddDeal() {
                       value={montantCollecte}
                       onChange={(e) => setMontantCollecte(e.target.value)}
                       placeholder="0"
-                      className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
-                      disabled={isR2Mode}
+                      className="input-base"
+                      disabled={typeVente === "FULL_PAY" || isSubmitting}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                       €
@@ -451,7 +458,7 @@ export default function AddDeal() {
                   step="1"
                   value={currentSliderValue}
                   onChange={handleSliderChange}
-                  disabled={isR2Mode || maxSlider === 0}
+                  disabled={typeVente === "FULL_PAY" || maxSlider === 0 || isSubmitting}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer
                     [&::-webkit-slider-thumb]:appearance-none
                     [&::-webkit-slider-thumb]:w-5
@@ -494,24 +501,31 @@ export default function AddDeal() {
               value={delaiConversion}
               onChange={(e) => setDelaiConversion(e.target.value)}
               placeholder="0"
-              className={`input-base ${isR2Mode ? "disabled:opacity-60 disabled:cursor-not-allowed" : ""}`}
-              disabled={isR2Mode}
+              className="input-base"
+              disabled={isSubmitting}
             />
           </div>
 
           {isR1Mode && parseFloat(montantContracte) > 50000 && (
             <div className="flex items-center gap-2 p-3 rounded-md text-sm bg-warning/15 text-warning border border-warning/30">
               <AlertCircle size={16} />
-              Deal de grande valeur — pensez à valider les conditions
-              commerciales.
+              Deal de grande valeur — pensez à valider les conditions commerciales.
             </div>
           )}
 
           <button
             type="submit"
-            className="btn-primary w-full h-12 text-sm mt-4 text-primary-foreground"
+            disabled={isSubmitting}
+            className="btn-primary w-full h-12 text-sm mt-4 text-primary-foreground disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Créer le deal
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Création en cours...
+              </>
+            ) : (
+              "Créer le deal"
+            )}
           </button>
         </form>
       </div>
