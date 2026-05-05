@@ -8,13 +8,16 @@ export type FullUser = User & {
   challenges: (Challenge & {
     deals: (Deal & {
       package: (Package & {
-        infopreneur: Infopreneur & {
-          niche: Niche;
-        };
+        infopreneur: Infopreneur & { niche: Niche };
       }) | null;
     })[];
     dailyEntries: DailyEntry[];
     infopreneur: Infopreneur & { niche: Niche };
+  })[];
+  deals: (Deal & {   // ← NOUVEAU
+    package: (Package & {
+      infopreneur: Infopreneur & { niche: Niche };
+    }) | null;
   })[];
   objectives: Objective[];
   monthlyScores: MonthlyScore[];

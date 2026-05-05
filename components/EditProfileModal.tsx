@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ExperienceClosing } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { ProfileFormData, updateProfile } from "@/app/actions/profilAction";
+import { ProfileFormData, updateProfile } from "@/app/actions/ProfilAction";
 
 interface EditProfilModalProps {
   open: boolean;

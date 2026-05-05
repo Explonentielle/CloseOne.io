@@ -65,6 +65,8 @@ export default function AddDeal() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isR2Mode = !!dateR2;
+
   useEffect(() => {
     if (!user) return;
     const infosMap = new Map<string, InfopreneurOption>();
@@ -114,8 +116,9 @@ export default function AddDeal() {
     fetchPackages();
   }, [selectedInfopreneurId, user]);
 
-  // Pré-remplir le montant contracté selon le package
+  // Pré-remplir le montant contracté selon le package (sauf si mode R2)
   useEffect(() => {
+    if (isR2Mode) return;
     const pkg = packages.find((p) => p.id === selectedPackageId);
     if (pkg) {
       setMontantContracte(pkg.valeur.toString());
@@ -124,12 +127,11 @@ export default function AddDeal() {
         setNbMensualites("");
       }
     }
-  }, [selectedPackageId, packages]);
+  }, [selectedPackageId, packages, isR2Mode]);
 
-  // Synchronisation du montant collecté :
-  // - FULL_PAY : toujours égal au montant contracté
-  // - SPLIT_PAY : calcul de la première mensualité (montant / nbMensualites)
+  // Synchronisation auto du montant collecté (ne s'exécute pas en mode R2)
   useEffect(() => {
+    if (isR2Mode) return;
     const contracte = parseFloat(montantContracte) || 0;
     if (typeVente === "FULL_PAY") {
       setMontantCollecte(contracte.toString());
@@ -138,7 +140,7 @@ export default function AddDeal() {
       const premiereMensualite = contracte / nb;
       setMontantCollecte(Math.floor(premiereMensualite).toString());
     }
-  }, [typeVente, montantContracte, nbMensualites]);
+  }, [typeVente, montantContracte, nbMensualites, isR2Mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,8 +161,9 @@ export default function AddDeal() {
       packageId: selectedPackageId,
       montantContracte: parseFloat(montantContracte) || 0,
       montantCollecte: parseFloat(montantCollecte) || 0,
-      typeVente: typeVente,
-      nbMensualites: typeVente === "SPLIT_PAY" ? (nbMensualites as NbMensualites) : null,
+      typeVente,
+      nbMensualites:
+        typeVente === "SPLIT_PAY" ? (nbMensualites as NbMensualites) : null,
       dateR1: dateR1 ? new Date(dateR1) : null,
       dateR2: dateR2 ? new Date(dateR2) : null,
       delaiConversion: delaiConversion ? parseInt(delaiConversion) : null,
@@ -175,11 +178,14 @@ export default function AddDeal() {
     }
   };
 
-  const selectedInfopreneur = infopreneurs.find((i) => i.id === selectedInfopreneurId);
+  const selectedInfopreneur = infopreneurs.find(
+    (i) => i.id === selectedInfopreneurId,
+  );
   const selectedPackage = packages.find((p) => p.id === selectedPackageId);
   const selectedChallenge = challenges.find((c) => c.id === selectedChallengeId);
   const isR1Mode = !!dateR1 && !dateR2;
-  const showTypeVente = parseFloat(montantContracte) > 0;
+
+  const showTypeVente = parseFloat(montantContracte) > 0 || isR2Mode;
 
   const closeEnAuto = dateR2 ? "R2" : dateR1 ? "R1" : "R1";
 
@@ -191,7 +197,10 @@ export default function AddDeal() {
     setMontantCollecte(value.toString());
   };
 
-  if (!user) return <div className="py-20 text-center text-muted-foreground">Chargement...</div>;
+  if (!user)
+    return (
+      <div className="py-20 text-center text-muted-foreground">Chargement...</div>
+    );
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-6 animate-slide-up">
@@ -217,7 +226,7 @@ export default function AddDeal() {
         }`}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Client + Package */}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
@@ -277,7 +286,7 @@ export default function AddDeal() {
             </div>
           </div>
 
-          {/* Challenge */}
+          {/* Challenge (optionnel) */}
           <div>
             <label className="text-sm font-medium mb-1.5 block flex items-center gap-1 text-muted-foreground">
               <Calendar size={14} /> Challenge (optionnel)
@@ -303,8 +312,8 @@ export default function AddDeal() {
                 {selectedChallenge.statut === "TERMINE"
                   ? "Terminé"
                   : selectedChallenge.statut === "EN_COURS"
-                    ? "En cours"
-                    : "À venir"}
+                  ? "En cours"
+                  : "À venir"}
               </div>
             )}
           </div>
@@ -365,7 +374,7 @@ export default function AddDeal() {
             </div>
           </div>
 
-          {/* Type de vente et mensualités */}
+          {/* Type de vente et mensualités (toujours visible si mode R2 ou montantContracte > 0) */}
           {showTypeVente && (
             <>
               <div>
@@ -379,7 +388,9 @@ export default function AddDeal() {
                   disabled={isSubmitting}
                 >
                   <option value="FULL_PAY">Full Pay (paiement unique)</option>
-                  <option value="SPLIT_PAY">Split Pay (paiement fractionné)</option>
+                  <option value="SPLIT_PAY">
+                    Split Pay (paiement fractionné)
+                  </option>
                 </select>
               </div>
               {typeVente === "SPLIT_PAY" && (
@@ -389,7 +400,9 @@ export default function AddDeal() {
                   </label>
                   <select
                     value={nbMensualites}
-                    onChange={(e) => setNbMensualites(e.target.value as NbMensualites)}
+                    onChange={(e) =>
+                      setNbMensualites(e.target.value as NbMensualites)
+                    }
                     className="input-base"
                     required
                     disabled={isSubmitting}
@@ -442,7 +455,10 @@ export default function AddDeal() {
                       onChange={(e) => setMontantCollecte(e.target.value)}
                       placeholder="0"
                       className="input-base"
-                      disabled={typeVente === "FULL_PAY" || isSubmitting}
+                      disabled={
+                        // En mode R2 on laisse toujours modifiable, sinon désactivé en FULL_PAY
+                        (!isR2Mode && typeVente === "FULL_PAY") || isSubmitting
+                      }
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                       €
@@ -458,7 +474,11 @@ export default function AddDeal() {
                   step="1"
                   value={currentSliderValue}
                   onChange={handleSliderChange}
-                  disabled={typeVente === "FULL_PAY" || maxSlider === 0 || isSubmitting}
+                  disabled={
+                    (!isR2Mode && typeVente === "FULL_PAY") ||
+                    maxSlider === 0 ||
+                    isSubmitting
+                  }
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer
                     [&::-webkit-slider-thumb]:appearance-none
                     [&::-webkit-slider-thumb]:w-5

@@ -22,19 +22,20 @@ export async function createDeal(data: {
   if (!user) return { success: false, error: "Utilisateur non trouvé" };
 
   try {
-     const deal = await prisma.deal.create({
-    data: {
-      challenge: data.challengeId ? { connect: { id: data.challengeId } } : undefined,
-      package: { connect: { id: data.packageId } },
-      montantContracte: data.montantContracte,
-      montantCollecte: data.montantCollecte,
-      typeVente: data.typeVente, // peut être undefined
-      nbMensualites: data.nbMensualites,
-      dateR1: data.dateR1,
-      dateR2: data.dateR2,
-      delaiConversion: data.delaiConversion,
-    },
-  });
+    const deal = await prisma.deal.create({
+      data: {
+        user: { connect: { id: user.id } },
+        challenge: data.challengeId ? { connect: { id: data.challengeId } } : undefined,
+        package: { connect: { id: data.packageId } },
+        montantContracte: data.montantContracte,
+        montantCollecte: data.montantCollecte,
+        typeVente: data.typeVente,
+        nbMensualites: data.nbMensualites,
+        dateR1: data.dateR1,
+        dateR2: data.dateR2,
+        delaiConversion: data.delaiConversion,
+      },
+    });
     revalidatePath("/deals");
     return { success: true, data: deal };
   } catch (error) {

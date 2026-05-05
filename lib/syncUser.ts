@@ -7,7 +7,7 @@ export const getFullUser = cache(async () => {
   const { userId } = await auth();
   if (!userId) return null;
 
-  // Inclusion complète avec tous les niveaux de relations
+  // Inclusion complète avec tous les niveaux de relations, y compris les deals directs
   const includeOptions: Prisma.UserInclude = {
     metrics: true,
     challenges: {
@@ -29,6 +29,23 @@ export const getFullUser = cache(async () => {
         infopreneur: {
           include: {
             niche: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc" as const,
+      },
+    },
+    // ✅ Deals directs (sans challenge)
+    deals: {
+      include: {
+        package: {
+          include: {
+            infopreneur: {
+              include: {
+                niche: true,
+              },
+            },
           },
         },
       },
@@ -89,6 +106,6 @@ export const getFullUser = cache(async () => {
 export const syncUser = cache(async () => {
   const user = await getFullUser();
   if (!user) return null;
-  const { metrics, challenges, objectives, monthlyScores, niches, ...base } = user;
+  const { metrics, challenges, objectives, monthlyScores, niches, deals, ...base } = user;
   return base;
 });

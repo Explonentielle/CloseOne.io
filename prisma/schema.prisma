@@ -87,6 +87,7 @@ model User {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
+  deals         Deal[]
   challenges    Challenge[]
   objectives    Objective[]
   monthlyScores MonthlyScore[]
@@ -203,6 +204,7 @@ model DailyEntry {
 
 model Deal {
   id               String         @id @default(cuid())
+  userId           String?        // ← nouveau champ : lien direct avec l'utilisateur
   challengeId      String?
   packageId        String?
   montantContracte Float          @default(0)
@@ -216,6 +218,7 @@ model Deal {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
+  user      User?      @relation(fields: [userId], references: [id])
   challenge Challenge? @relation(fields: [challengeId], references: [id])
   package   Package?   @relation(fields: [packageId], references: [id])
   payments  Payment[]
