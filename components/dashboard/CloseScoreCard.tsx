@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import CloseScoreRadar from "./CloseScoreRadar";
+import type { MonthlyScore } from "@prisma/client";
 
 function getScoreInfo(score: number) {
   const capped = Math.min(score, 95);
@@ -16,9 +17,10 @@ function getScoreInfo(score: number) {
 interface Props {
   score?: number;
   className?: string;
+  monthlyScore?: MonthlyScore | null; // ← données pour le radar
 }
 
-const CloseScoreCard = ({ score = 82, className = "" }: Props) => {
+const CloseScoreCard = ({ score = 82, className = "", monthlyScore = null }: Props) => {
   const [showRadar, setShowRadar] = useState(false);
   const capped = Math.min(score, 95);
   const info = getScoreInfo(score);
@@ -57,7 +59,7 @@ const CloseScoreCard = ({ score = 82, className = "" }: Props) => {
 
       {showRadar && (
         <div className="mt-3 animate-fade-in">
-          <CloseScoreRadar />
+          <CloseScoreRadar scores={monthlyScore} />
           <p className="text-[9px] text-[hsl(var(--muted-foreground))] text-center mt-1">
             Score calculé sur 5 critères vérifiés par CloseOne
           </p>

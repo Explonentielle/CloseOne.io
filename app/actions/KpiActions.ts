@@ -208,3 +208,48 @@ export async function validateMonthlyObjective(
     return { success: false, error: "Erreur lors de la validation" };
   }
 }
+
+export async function updateDailySentiment(data: {
+  challengeId: string;
+  date: string;
+  sentiment: string;
+}) {
+  const { userId } = await auth();
+  if (!userId) return { success: false, error: "Non authentifié" };
+
+  try {
+    const existing = await prisma.dailyEntry.findFirst({
+      where: {
+        challengeId: data.challengeId,
+        date: new Date(data.date),
+      },
+    });
+
+    if (existing) {
+      await prisma.dailyEntry.update({
+        where: { id: existing.id },
+        data: { sentiment: data.sentiment as any },
+      });
+    } else {
+      // Créer une entrée avec des valeurs par défaut (0) et le sentiment
+      await prisma.dailyEntry.create({
+        data: {
+          challengeId: data.challengeId,
+          date: new Date(data.date),
+          r1Planifie: 0,
+          r1Effectue: 0,
+          r2Planifie: 0,
+          r2Effectue: 0,
+          nbCloses: 0,
+          sentiment: data.sentiment as any,
+        },
+      });
+    }
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("Erreur updateDailySentiment:", error);
+    return { success: false, error: "Erreur lors de la mise à jour" };
+  }
+}

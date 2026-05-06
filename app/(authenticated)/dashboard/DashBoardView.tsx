@@ -5,17 +5,19 @@ import KpiDailyHistoryTab from "@/components/dashboard/KpiDailyHistoryTab";
 import KpiDailyModal from "@/components/dashboard/KpiDailyModal";
 import KpiWeeklyModal from "@/components/dashboard/KpiWeeklyModal";
 import KpiWeeklyTab from "@/components/dashboard/KpiWeeklyTab";
+import { useUser } from "@/contexts/UserContext";
 import { useState } from "react";
 
 const tabs = [
   { key: "dashboard", label: "Dashboard" },
   { key: "kpiDaily", label: "KPI Daily" },
-  { key: "kpiWeekly", label: "KPI Weekly" },
+  { key: "kpiWeekly", label: "OBJ Weekly" },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
 
 const DashboardView = () => {
+  const user = useUser();
   const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
   const [showDailyModal, setShowDailyModal] = useState(false);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
@@ -65,7 +67,7 @@ const DashboardView = () => {
       </div>
 
       <div key={activeTab} className="animate-fade-in">
-        {activeTab === "dashboard" && <DashboardTab />}
+        {activeTab === "dashboard" && user &&  <DashboardTab user={user} />}
         {activeTab === "kpiDaily" && <KpiDailyHistoryTab />}
         {activeTab === "kpiWeekly" && <KpiWeeklyTab />}
       </div>

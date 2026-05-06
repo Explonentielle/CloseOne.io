@@ -1,8 +1,12 @@
 "use client";
-import { useState } from "react";
-import { X } from "lucide-react";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import { saveDailyEntry } from "@/app/actions/KpiActions";
+import { updateDailySentiment } from "@/app/actions/KpiActions";
+import { toDateKey, sumBy } from "@/lib/stats-utils";
+import type { FullUser } from "@/contexts/UserContext";
 
 interface KpiDailyModalProps {
   open: boolean;
@@ -10,18 +14,6 @@ interface KpiDailyModalProps {
   challengeId?: string;
 }
 
-type FieldKey = "r1Plan" | "r1Eff" | "r2Plan" | "r2Eff" | "closes" | "cash";
-
-const fields: { key: FieldKey; label: string }[] = [
-  { key: "r1Plan", label: "R1 Planifiés" },
-  { key: "r1Eff", label: "R1 Effectués" },
-  { key: "r2Plan", label: "R2 Planifiés" },
-  { key: "r2Eff", label: "R2 Effectués" },
-  { key: "closes", label: "Closes" },
-  { key: "cash", label: "Cash collecté €" },
-];
-
-// Mapping des sentiments pour l'emoji
 const sentiments = [
   { value: "HAPPY", emoji: "😊", label: "Heureux" },
   { value: "NEUTRAL", emoji: "😐", label: "Neutre" },
@@ -30,76 +22,87 @@ const sentiments = [
   { value: "TIRED", emoji: "😴", label: "Fatigué" },
 ];
 
-const KpiDailyModal = ({ open, onClose, challengeId }: KpiDailyModalProps) => {
+// Helpers
+const getAllDeals = (user: FullUser) => {
+  const challengeDeals = user.challenges.flatMap(ch => ch.deals);
+  const directDeals = user.deals ?? [];
+  return [...challengeDeals, ...directDeals];
+};
+
+const getAllDailyEntries = (user: FullUser) => {
+  return user.challenges.flatMap(ch => ch.dailyEntries ?? []);
+};
+
+export default function KpiDailyModal({ open, onClose, challengeId }: KpiDailyModalProps) {
+  const router = useRouter();
   const user = useUser();
-  const [values, setValues] = useState<Record<FieldKey, number>>({
-    r1Plan: 0, r1Eff: 0, r2Plan: 0, r2Eff: 0, closes: 0, cash: 0,
-  });
   const [sentiment, setSentiment] = useState<string>("");
-  const [showSummary, setShowSummary] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
 
-  const handleChange = (key: FieldKey, val: string) => {
-    setValues(prev => ({ ...prev, [key]: Number(val) || 0 }));
-    setError(null);
-  };
+  // Récupération des données du jour
+  const todayData = useMemo(() => {
+    if (!user) return null;
+    const todayKey = toDateKey(new Date());
 
-  const closingRate = values.r1Eff > 0 ? Math.round((values.closes / values.r1Eff) * 100) : 0;
+    // Daily entries du jour
+    const allEntries = getAllDailyEntries(user);
+    const todayEntries = allEntries.filter(e => toDateKey(e.date) === todayKey);
+    const r1Plan = sumBy(todayEntries, e => e.r1Planifie);
+    const r1Eff = sumBy(todayEntries, e => e.r1Effectue);
+    const r2Plan = sumBy(todayEntries, e => e.r2Planifie);
+    const r2Eff = sumBy(todayEntries, e => e.r2Effectue);
+    const closesFromEntries = sumBy(todayEntries, e => e.nbCloses);
 
-  const getMessage = () => {
-    if (values.closes > 0) return "🔥 Bonne journée — tu as closé.";
-    if (values.r1Eff >= values.r1Plan && values.r1Plan > 0) return "✅ Discipline parfaite aujourd'hui.";
-    if (values.r1Eff < values.r1Plan) return "⚠️ Pense à replanifier demain.";
-    return "📋 Journée de préparation.";
-  };
+    // Deals du jour (date de création)
+    const allDeals = getAllDeals(user);
+    const todayDeals = allDeals.filter(d => toDateKey(d.createdAt) === todayKey);
+    const cashCollected = sumBy(todayDeals, d => d.montantCollecte);
+    const closesFromDeals = todayDeals.filter(d => d.montantContracte > 0).length;
+    const closes = Math.max(closesFromEntries, closesFromDeals);
 
-  const handleSave = async () => {
+    // Sentiment existant
+    const existingSentiment = todayEntries[0]?.sentiment;
+    if (existingSentiment && !sentiment) setSentiment(existingSentiment);
+
+    const hasActivity = r1Eff > 0 || r2Eff > 0 || closes > 0 || cashCollected > 0;
+    return { r1Plan, r1Eff, r2Plan, r2Eff, closes, cashCollected, hasActivity, sentiment: existingSentiment };
+  }, [user, sentiment]);
+
+  // Mettre à jour le sentiment
+  const handleSaveSentiment = async () => {
+    if (!user) return;
     setIsSaving(true);
     setError(null);
 
-    try {
-      // Récupérer le challenge actif (le plus récent)
-      let activeChallengeId = challengeId;
-      if (!activeChallengeId && user?.challenges?.length) {
-        activeChallengeId = user.challenges[0]?.id;
-      }
-
-      if (!activeChallengeId) {
-        setError("Aucun challenge actif. Crée un challenge d'abord.");
-        return;
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      
-      const result = await saveDailyEntry({
-        challengeId: activeChallengeId,
-        date: today,
-        r1Planifie: values.r1Plan,
-        r1Effectue: values.r1Eff,
-        r2Planifie: values.r2Plan,
-        r2Effectue: values.r2Eff,
-        nbCloses: values.closes,
-        sentiment: sentiment as any,
-      });
-
-      if (result.success) {
-        onClose();
-        // Reset form
-        setValues({ r1Plan: 0, r1Eff: 0, r2Plan: 0, r2Eff: 0, closes: 0, cash: 0 });
-        setSentiment("");
-        setShowSummary(false);
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError("Erreur lors de l'enregistrement");
-    } finally {
-      setIsSaving(false);
+    let activeChallengeId = challengeId;
+    if (!activeChallengeId && user.challenges?.length) {
+      activeChallengeId = user.challenges[0].id;
     }
+    if (!activeChallengeId) {
+      setError("Aucun challenge actif.");
+      setIsSaving(false);
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const result = await updateDailySentiment({
+      challengeId: activeChallengeId,
+      date: today,
+      sentiment,
+    });
+
+    if (result.success) {
+      onClose();
+    } else {
+      setError(result.error);
+    }
+    setIsSaving(false);
   };
 
-  if (!open) return null;
+  if (!open || !user) return null;
+  if (!todayData) return <div className="p-4 text-center">Chargement...</div>;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
@@ -107,6 +110,7 @@ const KpiDailyModal = ({ open, onClose, challengeId }: KpiDailyModalProps) => {
         className="w-full max-w-md bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border)/0.3)] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* En-tête */}
         <div className="flex justify-between items-center mb-5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[hsl(var(--primary)/0.2)] flex items-center justify-center">
@@ -115,7 +119,7 @@ const KpiDailyModal = ({ open, onClose, challengeId }: KpiDailyModalProps) => {
             <div>
               <h3 className="font-bold text-[hsl(var(--foreground))]">KPI Daily</h3>
               <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </p>
             </div>
           </div>
@@ -130,24 +134,61 @@ const KpiDailyModal = ({ open, onClose, challengeId }: KpiDailyModalProps) => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {fields.map((field) => (
-            <div key={field.key}>
-              <label className="text-xs text-[hsl(var(--muted-foreground))] block mb-1">{field.label}</label>
-              <input
-                type="number"
-                min={0}
-                value={values[field.key] || ""}
-                onChange={(e) => handleChange(field.key, e.target.value)}
-                className="w-full bg-[hsl(var(--background))] border border-[hsl(var(--border)/0.3)] rounded-lg px-3 py-2 text-sm focus:border-[hsl(var(--primary))] outline-none"
-                placeholder="0"
-              />
-            </div>
-          ))}
+        {/* Section résumé du jour (repliable) */}
+        <div className="mb-5 p-3 bg-[hsl(var(--background))] rounded-[var(--radius-lg)]">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase">
+              Statistiques du jour
+            </p>
+            <button
+              onClick={() => setShowSummary(!showSummary)}
+              className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] transition-colors"
+            >
+              {showSummary ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
+
+          {showSummary && (
+            <>
+              <div className="grid grid-cols-2 gap-3 text-center mb-3">
+                <div className="bg-[hsl(var(--card))] p-2 rounded-md">
+                  <div className="text-[10px] text-muted-foreground">R1</div>
+                  <div className="text-sm font-semibold">
+                    {todayData.r1Eff}/{todayData.r1Plan}
+                  </div>
+                </div>
+                <div className="bg-[hsl(var(--card))] p-2 rounded-md">
+                  <div className="text-[10px] text-muted-foreground">R2</div>
+                  <div className="text-sm font-semibold">
+                    {todayData.r2Eff}/{todayData.r2Plan}
+                  </div>
+                </div>
+                <div className="bg-[hsl(var(--card))] p-2 rounded-md">
+                  <div className="text-[10px] text-muted-foreground">Closes</div>
+                  <div className="text-sm font-semibold text-primary">{todayData.closes}</div>
+                </div>
+                <div className="bg-[hsl(var(--card))] p-2 rounded-md">
+                  <div className="text-[10px] text-muted-foreground">Cash collecté</div>
+                  <div className="text-sm font-semibold text-primary">{todayData.cashCollected.toLocaleString("fr-FR")}€</div>
+                </div>
+              </div>
+              {!todayData.hasActivity && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push("/deals/new");
+                  }}
+                  className="w-full mt-2 text-xs bg-primary/10 text-primary px-3 py-2 rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  + Ajouter un deal aujourd'hui
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Sentiment de fin de journée */}
-        <div className="mb-4">
+        <div className="mb-5">
           <label className="text-xs text-[hsl(var(--muted-foreground))] block mb-2">Comment s'est passée ta journée ?</label>
           <div className="flex gap-2 flex-wrap">
             {sentiments.map((s) => (
@@ -166,38 +207,15 @@ const KpiDailyModal = ({ open, onClose, challengeId }: KpiDailyModalProps) => {
           </div>
         </div>
 
-        {showSummary && (
-          <div className="mt-4 p-4 bg-[hsl(var(--background))] rounded-lg border border-[hsl(var(--primary)/0.3)]">
-            <p className="text-xs font-medium text-[hsl(var(--primary))] mb-2">Résumé de ta journée</p>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <span>R1: <strong>{values.r1Eff}/{values.r1Plan}</strong></span>
-              <span>R2: <strong>{values.r2Eff}/{values.r2Plan}</strong></span>
-              <span>Closes: <strong>{values.closes}</strong></span>
-              <span>Cash: <strong className="text-[hsl(var(--primary))]">{values.cash}€</strong></span>
-              <span>Taux: <strong>{closingRate}%</strong></span>
-            </div>
-            <p className="mt-2 text-sm font-bold text-[hsl(var(--primary))]">{getMessage()}</p>
-          </div>
-        )}
-
-        <div className="flex gap-3 mt-5">
-          <button
-            onClick={() => setShowSummary(true)}
-            className="flex-1 py-2.5 rounded-[var(--radius-lg)] border border-[hsl(var(--primary)/0.3)] text-[hsl(var(--primary))] text-sm font-medium hover:bg-[hsl(var(--primary)/0.1)] transition-all"
-          >
-            Voir le résumé
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-1 py-2.5 rounded-[var(--radius-lg)] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
-          >
-            {isSaving ? "Enregistrement..." : "Enregistrer"}
-          </button>
-        </div>
+        {/* Bouton d'enregistrement (uniquement pour le sentiment) */}
+        <button
+          onClick={handleSaveSentiment}
+          disabled={isSaving}
+          className="w-full py-2.5 rounded-[var(--radius-lg)] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer mon humeur"}
+        </button>
       </div>
     </div>
   );
-};
-
-export default KpiDailyModal;
+}

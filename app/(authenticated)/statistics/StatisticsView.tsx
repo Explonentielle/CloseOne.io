@@ -181,7 +181,7 @@ function useCashChartData(user: UserType | null) {
     if (!user) return [{ date: "Aucune donnée", cash: 0 }];
     const byDay: Record<string, number> = {};
     const allDeals = getAllDeals(user);
-    console.log(allDeals)
+
     for (const deal of allDeals) {
       if (deal.montantCollecte <= 0) continue;
       let date = deal.dateR2 ?? deal.dateR1 ?? deal.dateClose ?? deal.createdAt;
@@ -272,7 +272,6 @@ export default function StatisticsView() {
   const { days, offset, monthLabel } = useCalendarData(user);
   const totalCollecte = user ? getAllDeals(user).reduce((s, d) => s + d.montantCollecte, 0) : 0;
 
-  console.log(cashChartData)
   const metrics: Record<Level, Metric[]> = {
     Journée: dayMetrics,
     Challenge: challengeMetrics,
